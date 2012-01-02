@@ -5,6 +5,7 @@ module Types ( module Types
              ) where
 
 import Data.Complex
+import Graphics.GD(Color)
 
 --------------------------------------------------------------------------------
 --Basic datatypes.
@@ -55,9 +56,8 @@ type IFS = (Point -> [Point], [Point]) --second coordinate is starting values
 type Resolution = (Int,Int)
 type Center = Complex Double
 type Width = Double
-type Colour = [Int] --list of three ints; alpha channel not implemented yet.
-type Gradient = (Int -> Colour,String) --the string is the label
 type Pixel = (Int,Int)
+type Gradient = (Color -> Color, String)
 data Mode = Roots | IFS | Both deriving(Eq)
 data Config a = Config {
 coefficients::IterCoeffs a, resolution::Resolution,

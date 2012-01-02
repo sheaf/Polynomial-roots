@@ -32,9 +32,9 @@ ifsIterates :: Iterations -> IFS -> [Complex Double]
 ifsIterates 0 (fs,vals) = vals
 ifsIterates n (fs,vals) = fs =<< (ifsIterates (n-1) (fs,vals))
 
-ifsCounts :: (Coefficient a) => [Complex Double] -> Config a -> [Pixel]
-ifsCounts scales (Config ic res d c w _) = toCoords points res (0:+0) w
-    where points' = ifsIterates d (toifs ic c)
+ifsCounts :: (Coefficient a) => [Complex Double] -> IFS -> Config a -> [Pixel]
+ifsCounts scales ifs (Config ic res d c w _) = toCoords points res (0:+0) w
+    where points' = ifsIterates d ifs
           points = case scales of
                         [] -> points'
                         otherwise -> (\x -> map (x*) scales) =<< points'

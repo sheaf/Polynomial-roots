@@ -1,2 +1,6 @@
 *.png
-
+*.o
+*.hi
+*.ini
+*.prof
+Main

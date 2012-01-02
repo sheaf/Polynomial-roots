@@ -3,6 +3,7 @@ module Roots where
 import Types
 import Interval
 import Plotting
+import Numeric.GSL.Polynomials(polySolve)
 
 --------------------------------------------------------------------------------
 --Finding polynomials with possible roots using tree pruning.
@@ -71,50 +72,10 @@ canHaveRoots :: (Coefficient a) =>
 canHaveRoots coeffs d cI = getPolynomials $ constructTree coeffs d cI
 
 --------------------------------------------------------------------------------
---Root finding algorithm using Laguerre's method.
+--Root finding: GSL library.
 
---One iteration of Laguerre's method.
-laguerre' :: (Coefficient a) => Polynomial a -> Guess -> Guess
-laguerre' q x = x - a
-    where p = map toComplex q
-          g = (evaluate p' x) / (evaluate p x)
-          h = g^2 - (evaluate p'' x) / (evaluate p' x)
-          k = sqrt((n-1)*(n*h - g^2))
-          s
-            | magnitude (g+k) >= magnitude (g-k) = g+k
-            | otherwise = g-k
-          a = n / s
-          n = fromIntegral $ length p -1
-          p' = derivative p
-          p''= derivative p'
-
-laguerre :: (Coefficient a) => 
-        ErrorBound -> Iterations -> Polynomial a -> Guess -> Root
-laguerre eps k p g
-    | k <= 0 = g
-    | magnitude (g' - g) < eps = g' --not a very robust check!
-    | otherwise = laguerre eps (k-1) p g'
-        where g' = laguerre' p g
-
---Deflates a polynomial, i.e. divides it by a monic factor.
-deflate :: (Coefficient a) => Guess -> Polynomial a -> Polynomial (Complex Double)
-deflate g p = tail $ deflate' g as bs
-    where [as,bs] = map (map toComplex) [take 1 $ reverse p, drop 1 $ reverse p]
-          deflate' z as' bs'
-            | bs' == [] = as'
-            | otherwise = deflate' z (((head bs')+z*(head as')):as') (tail bs')
-
-findRoots :: (Coefficient a) => 
-             ErrorBound -> Iterations -> Polynomial a -> [Root]
-findRoots _   _ []     = error "polynomial with no coefficients"
-findRoots _   _ [0]    = [0]
-findRoots _   _ [_]    = []
-findRoots eps k [b, 0] = findRoots eps k [b]
-findRoots eps k [b, a] = [ toComplex (-b) / toComplex a]
-findRoots eps k p      = z : findRoots eps k (deflate z p2)
-    where z = laguerre eps k p2 0
-          p2 = reverse $ (dropWhile (==0)) $ reverse p
-
+findRoots :: Polynomial Double -> [Root]
+findRoots = polySolve
 
 --------------------------------------------------------------------------------
 --Plotting sets of roots.
@@ -125,9 +86,8 @@ findRoots eps k p      = z : findRoots eps k (deflate z p2)
    Produces blocky "spread out" versions of the real images.
 
 colourFunction' :: (Coefficient a) => 
-                   [Polynomial a] -> Resolution -> Width -> Center
-                   -> Gradient -> Pixel -> Colour
-colourFunction' polys (rx,ry) w c (grad,_) (px,py) = col
+                   [Polynomial a] -> Config a ->  Pixel -> Colour
+colourFunction' polys (Config _ (rx,ry) w c (grad,_)) (px,py) = col
     where cI = (((realPart c -w/2):+ (imagPart c -h/2)),
                 ((realPart c +w/2):+ (imagPart c +h/2)))
           h = w * ry'/rx'
@@ -138,10 +98,10 @@ colourFunction' polys (rx,ry) w c (grad,_) (px,py) = col
           col = grad (length roots)
 -}
 
-rootList :: (Coefficient a) => 
-            [Polynomial a] -> Resolution -> Center -> Width -> [Pixel]
+rootList :: --(Coefficient a) => 
+            [Polynomial Int] -> Resolution -> Center -> Width -> [Pixel]
 rootList polys (rx,ry) c w  = coordlist
     where rx' = fromIntegral rx
-          rootlist= concat $ map (findRoots (0.5*w/rx') 300)
-                           $ map (map toComplex) polys
+          rootlist= concat $ map findRoots
+                           $ map (map fromIntegral) polys
           coordlist = toCoords rootlist (rx,ry) c w
