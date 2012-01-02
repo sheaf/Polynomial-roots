@@ -28,26 +28,31 @@ import ParseConfig
 import MainGUI
 
 ifsRoutine :: (Coefficient a) => Config GDColor a -> IO()
-ifsRoutine cfg@(Config ic (rx,ry) d c w g) = do
+ifsRoutine cfg = do
     putStrLn ""
     putStrLn "IFS routine."
     putStrLn "Computing scale factors... (experimental)"
     putStrLn $ "Scale factors are: " ++ show (getScales cfg)
     putStrLn "Computing IFS..."
     putStrLn $ "I'm going to write to file '" ++ ifsfile ++ "'."
-    writeImage ifsfile (ifsPixels cfg) (rx,ry) g
+    writeImageFile cfg ifsfile (ifsPoints cfg)
     putStrLn "Done writing to file 'ifs_image.png'. Finished IFS routine."
   where ifsfile = "ifs_image.png"
 
 rootsRoutine :: (Real a, Coefficient a) => Config GDColor a -> IO()
-rootsRoutine cfg@(Config ic (rx,ry) d c w g) = do
+rootsRoutine cfg = do
     putStrLn ""
     putStrLn "Roots routine."
     putStrLn "Computing roots."
     putStrLn $ "I'm going to write to file '" ++ rootsfile ++ "'."
-    writeImage rootsfile (rootsPixels cfg) (rx,ry) g 
+    writeImageFile cfg rootsfile (getRoots cfg)
     putStrLn "Done writing to file 'roots_image.png'. Finished roots routine."
   where rootsfile = "roots_image.png"
+
+writeImageFile cfg fn pts = writeImage fn pxs res g
+  where pxs = plotPixels cfg pts
+        res = resolution cfg
+        g = gradient cfg
 
 main :: IO()
 main = do

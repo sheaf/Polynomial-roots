@@ -40,10 +40,12 @@ runMainLoop :: (Real a, Coefficient a ) => Mode -> Config RGB8 a -> IO ()
 runMainLoop mode cfg = do mainLoop (gradient cfg) (getPixels mode cfg)
 
 getPixels :: (Real a, Coefficient a ) => Mode -> Config c a -> [Pixel]
-getPixels Roots cfg = rootsPixels cfg
-getPixels IFS cfg = ifsPixels cfg
-getPixels Both cfg = interleave (rootsPixels cfg) (offset <$> ifsPixels cfg)
+getPixels Roots cfg = plotPixels cfg (getRoots cfg)
+getPixels IFS cfg = plotPixels cfg (ifsPoints cfg)
+getPixels Both cfg = interleave rootsPxs (offset <$> ifsPxs)
   where (rx, _) = resolution cfg
+        rootsPxs = plotPixels cfg (getRoots cfg)
+        ifsPxs = plotPixels cfg (ifsPoints cfg)
         interleave (x:xs) (y:ys) = x:y:interleave xs ys
         interleave [] ys = ys
         interleave xs [] = xs

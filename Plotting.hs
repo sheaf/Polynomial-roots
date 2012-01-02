@@ -12,6 +12,7 @@ import Interval
 import Image
 
 
+
 type RGB8 = (Word8, Word8, Word8)
 type GDColor = GD.Color
 
@@ -46,7 +47,7 @@ instance RGB GD.Color where
 
 
 --------------------------------------------------------------------------------
---Gradients and plotting.
+-- Gradients 
 
 showGradient :: Gradient c -> String
 showGradient = snd
@@ -89,6 +90,32 @@ grey h = (grey'.splitRGB , "Grey (height "++show(h)++")")
           grey' (a,_,_) = rgb b b b
             where b = minimum [255,a+d]
 
+--------------------------------------------------------------------------------
+-- Plotting
+
+plotPixels :: (Plot a, CoeffType a ~ b, Coefficient b) 
+           => Config c b -> [a] -> [Pixel]
+plotPixels cfg xs = toPixels cfg xs
+
+
+data RootPlot a = RootPlot (Polynomial a) Root
+newtype IFSPlot a = IFSPlot (Complex Double)
+
+class Plot a where
+    type CoeffType a :: *
+    toPixels :: Config c (CoeffType a) -> [a] -> [Pixel]
+
+instance (Real a, Coefficient a) => Plot (RootPlot a) where
+    type CoeffType (RootPlot a) = a
+    toPixels (Config ic res d c w g) rs = toCoords roots' res c w
+      where getRoot (RootPlot _ root) = root
+            roots' = map getRoot rs
+
+instance Plot (IFSPlot a) where
+    type CoeffType (IFSPlot a) = a
+    toPixels (Config _ res _ _ w _) pts = toCoords (getPt <$> pts) res (0:+0) w
+      where getPt (IFSPlot p) = p
+
 toCoords :: [Root] -> Resolution -> Center -> Width -> [Pixel]
 toCoords roots (rx,ry) c w  = map (\z -> ( floor(realPart z), floor(imagPart z)))
                                     $ map (\z -> (rx'/w :+ 0) * (z-p))
@@ -97,3 +124,5 @@ toCoords roots (rx,ry) c w  = map (\z -> ( floor(realPart z), floor(imagPart z))
                                   h = w * ry'/rx' 
                                   p = c - ( w/2 :+ h/2)
                                   p'= c + ( w/2 :+ h/2)
+
+
