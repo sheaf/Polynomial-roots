@@ -2,29 +2,28 @@ module Image where
 
 import qualified Graphics.GD.ByteString.Lazy as GD
 import Types
+import Util
+import Rendering.Raster
 
 --------------------------------------------------------------------------------
 --Image writing.
 
 --this possibly flips the image, check!!
-writePixel:: GD.Image -> Pixel -> Gradient GD.Color -> IO()
-writePixel image (px,py) (grad,_) = do
-    --make this non-monochrome!!
-    col <- GD.getPixel (px,py) image
-    let col' = grad col
-    GD.setPixel (px,py) col' image
+writePixel:: Int -> GD.Image -> Gradient v GD.Color -> (RstCoord, v) -> IO()
+writePixel ry image (grad,_) ((px,py), c) = do
+    let col' = grad c
+    GD.setPixel (px,ry-py) col' image
 
-writePixels :: GD.Image -> [Pixel] -> Gradient GD.Color -> IO()
-writePixels image p g
-    | null p = return()
-    | otherwise = do writePixel image (head p) g
-                     writePixels image (tail p) g
+writePixels :: Int -> GD.Image -> [IO (Maybe (RstCoord, v))] 
+            -> Gradient v GD.Color -> IO()
+writePixels ry image [] g = return ()
+writePixels ry image (p:ps) g = do whenJust (writePixel ry image g) =<< p
+                                   writePixels ry image ps g
 
-writeImage :: FilePath -> [Pixel] -> Resolution -> Gradient GD.Color -> IO()
+writeImage :: (Monoid v) => FilePath -> [IO (Maybe (RstCoord, v))] 
+           -> Resolution -> Gradient v GD.Color -> IO()
 writeImage file pixels (rx,ry) (grad,s) = do
-    let pixels' = map (\(px,py) -> (px,ry-py)) pixels 
     image <- GD.newImage (rx,ry)
-    let col = 0 --change for other gradients!!
-    GD.fillImage col image
-    writePixels image pixels' (grad,s)
+    GD.fillImage (grad mempty) image
+    writePixels ry image pixels (grad, s)
     GD.savePngFile file image

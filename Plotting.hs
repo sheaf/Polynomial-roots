@@ -10,7 +10,8 @@ import Data.Word
 import Data.List
 import Types
 import Interval
-import Image
+import Util
+-- import Image
 
 
 
@@ -36,67 +37,54 @@ instance RGB (Int, Int, Int) where
 
 instance RGB RGB8 where
     type Component RGB8 = Int
-    rgb r g b = (clampWord8 r, clampWord8 g, clampWord8 b)
+    rgb r g b = (clampByte r, clampByte g, clampByte b)
     splitRGB (r, g, b) = (fromIntegral r, fromIntegral g, fromIntegral b)
 
-clampWord8 = fromIntegral . min 255 . max 0
+clampByte :: (Integral a, Num b) => a -> b
+clampByte x = fromIntegral . min 255 . max 0 $ x
 
 instance RGB GD.Color where
     type Component GD.Color = Int
-    rgb = GD.rgb
+    rgb r g b = GD.rgb (clampByte r) (clampByte g) (clampByte b)
     splitRGB c = let (r,g,b,_) = GD.toRGBA c in (r,g,b)
 
 
 --------------------------------------------------------------------------------
 -- Gradients 
 
-showGradient :: Gradient c -> String
+showGradient :: Gradient v c -> String
 showGradient = snd
 
---Refactoring of gradients more than welcome.
 
---A black-red-yellow-white gradient, with 0 -> black and h -> white.
--- warm :: Int -> Gradient
-warm :: (RGB c) => Int -> Gradient c
-warm h = (warm'.splitRGB, "Warm (height "++show(h)++")")
-    where d = fromInteger $ ceiling(3*255/fromIntegral h)
-          warm' (r,0,0) = rgb v1 v2 v3
-            where v1 = minimum [255,r+d]
-                  v2 = maximum [0,r+d-255]
-                  v3 = maximum [0,r+d-511]
-          warm' (255,g,0) = rgb 255 v1 v2
-            where v1 = minimum [255,g+d]
-                  v2 = maximum [0,g+d-255]
-          warm' (255,255,b) = rgb 255 255 v1
-            where v1 = minimum [255,b+d]   
+logIters x = fromInteger . round . (45 *) . log . fromIntegral . getSum $ x
 
-flipRB :: (RGB c) => c -> c
-flipRB col = rgb r g b
-    where [r,g,b] = (\(a,b,c) -> [c,b,a]) $ splitRGB col
+warm :: (RGB c, Integral v) => Int -> Gradient (Sum v) c
+warm h = (warm', concat ["Warm (height ", show h, ")"])
+  where warm' v = rgb (logIters v) (logIters v - 10*h') (logIters v - 20*h')
+        h' = fromIntegral h
 
---A black-blue-cyan-white gradient, with 0 -> black and h -> white.
-cold :: (RGB c) => Int -> Gradient c
-cold h = (cold'.splitRGB , "Cold (height "++show(h)++")")
-    where cold' (r,g,b) = flipRB $ fst (warm h) (rgb b g r)
-          
---Binary "gradient".
-binary :: (RGB c) => Int -> Gradient c
-binary _ = (binary'.splitRGB , "Binary")
-    where binary' _ = rgb 255 255 255
+cold :: (RGB c, Integral v) => Int -> Gradient (Sum v) c
+cold h = (cold', concat ["Cold (height ", show h, ")"])
+  where cold' v = rgb (logIters v - 20*h') (logIters v - 10*h') (logIters v) 
+        h' = fromIntegral h
 
---A black to white gradient.
-grey :: (RGB c) => Int -> Gradient c
-grey h = (grey'.splitRGB , "Grey (height "++show(h)++")")
-    where d = fromInteger $ ceiling(255/fromIntegral h)
-          grey' (a,_,_) = rgb b b b
-            where b = minimum [255,a+d]
+binary :: (RGB c, Integral v) => Int -> Gradient (Sum v) c
+binary _ = (const $ rgb 255 255 255, "Binary")
+
+stripes :: (RGB c, Integral v) => Int -> Gradient (Sum v) c
+stripes h = (stripes', concat ["Stripes (width ", show h, ")"])
+  where stripes' v | even (v' `div` h) = rgb 0 0 255
+                   | otherwise         = rgb 0 255 0
+          where v' = fromIntegral . getSum $ v
+
+grey :: (RGB c, Integral v) => Int -> Gradient (Sum v) c
+grey h = (grey', concat ["Grey (height ", show h, ")"])
+  where grey' v = let v' = logIters v - 10 * h' in rgb v' v' v'
+        h' = fromIntegral h
+
 
 --------------------------------------------------------------------------------
 -- Plotting
-
--- plotPixels :: (Plot a, CoeffType a ~ b, Coefficient b) 
---            => Config c b -> [a] -> [Pixel]
--- plotPixels cfg xs = toPixels cfg xs
 
 
 data RootPlot a = RootPlot (Polynomial a) Root
@@ -105,37 +93,3 @@ newtype IFSPlot a = IFSPlot (Complex Double)
 type PixelOrig = Integer
 
 type PlotData = (Pixel, PixelOrig)
-
-class Plot a where
-    type CoeffType a :: *
-    toPixels   :: Config c (CoeffType a) -> [a] -> [Pixel]
-    toOrig     :: Config c (CoeffType a) -> [a] -> [PixelOrig]
-    plotPixels :: Config c (CoeffType a) -> [a] -> [PlotData]
-    toPixels cfg xs = fst <$> plotPixels cfg xs
-    toOrig cfg xs = snd <$> plotPixels cfg xs
-
-instance (Real a, Coefficient a) => Plot (RootPlot a) where
-    type CoeffType (RootPlot a) = a
-    plotPixels (Config ic res d c w g) rs = zip roots origs
-      where getPlot (RootPlot _ root) = root
-            getOrig (RootPlot orig _) = encodeCoeffs orig
-            roots = toCoords (map getPlot rs) res c w
-            origs = map getOrig rs
-            encodeCoeffs = foldl' (\x y -> x * 2 + if y <= 0 then 0 else 1) 0
-
-instance Plot (IFSPlot a) where
-    type CoeffType (IFSPlot a) = a
-    plotPixels (Config _ res _ _ w _) pts = zip points (repeat 1)
-      where getPlot (IFSPlot p) = p
-            points = toCoords (getPlot <$> pts) res (0:+0) w
-
-toCoords :: [Root] -> Resolution -> Center -> Width -> [Pixel]
-toCoords roots (rx,ry) c w  = map (\z -> ( floor(realPart z), floor(imagPart z)))
-                                    $ map (\z -> (rx'/w :+ 0) * (z-p))
-                                    $ filter (\z -> elemI z (p,p')) roots
-                            where [rx',ry'] = map (fromIntegral) [rx,ry]
-                                  h = w * ry'/rx' 
-                                  p = c - ( w/2 :+ h/2)
-                                  p'= c + ( w/2 :+ h/2)
-
-

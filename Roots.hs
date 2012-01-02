@@ -99,7 +99,7 @@ colourFunction' polys (Config _ (rx,ry) w c (grad,_)) (px,py) = col
           col = grad (length roots)
 -}
 
-getPolys :: (Real a, Coefficient a) => Config c a -> [Polynomial a]
+getPolys :: (Real a, Coefficient a) => Config v c a -> [Polynomial a]
 getPolys (Config ic (rx, ry) d c w _) = canHaveRoots ic d cI
   where h = (w * fromIntegral ry / fromIntegral rx) -- ::Double
         cI = c +! ((-w/2) :+ (-h/2), (w/2) :+ (h/2))
@@ -107,5 +107,5 @@ getPolys (Config ic (rx, ry) d c w _) = canHaveRoots ic d cI
 polyRoots :: (Real a, Coefficient a) => [Polynomial a] -> [RootPlot a]
 polyRoots polys = (\p -> map (RootPlot p) . findRoots $ map realToFrac p) =<< polys
 
-getRoots :: (Real a, Coefficient a) => Config c a -> [RootPlot a]
+getRoots :: (Real a, Coefficient a) => Config v c a -> [RootPlot a]
 getRoots cfg = polyRoots $ getPolys cfg

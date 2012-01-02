@@ -56,15 +56,15 @@ type Resolution = (Int,Int)
 type Center = Complex Double
 type Width = Double
 type Pixel = (Int,Int)
-type Gradient c = (c -> c, String)
+type Gradient v c = (v -> c, String)
 data Mode = Roots | IFS | Both deriving (Eq, Ord, Read, Show)
-data Config c a = Config { coefficients :: IterCoeffs a
-                         , resolution   :: Resolution
-                         , degree       :: Degree
-                         , center       :: Center
-                         , width        :: Width
-                         , gradient     :: Gradient c
-                         }
+data Config v c a = Config { coefficients :: IterCoeffs a
+                           , resolution   :: Resolution
+                           , degree       :: Degree
+                           , center       :: Center
+                           , width        :: Width
+                           , gradient     :: Gradient v c
+                           }
 
 --------------------------------------------------------------------------------
 --Basic functions.

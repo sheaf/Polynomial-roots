@@ -17,41 +17,53 @@ import Data.Complex
 import System.Environment(getArgs)
 import System.IO
 import Data.Char
+import Data.Maybe
 
 import Roots
 import IFS
+import Util
 import Types
 import Plotting
 import Interval
 import Image
 import ParseConfig
 import MainGUI
+import Rendering.Raster
 
-ifsRoutine :: (Coefficient a) => Config GDColor a -> IO()
+ifsRoutine :: (Integral v, Num a, Coefficient a) 
+           => Config (Sum v) GDColor a -> IO()
 ifsRoutine cfg = do
+    rst <- createRasterizerIO ifsFunc cfg
     putStrLn ""
     putStrLn "IFS routine."
     putStrLn "Computing scale factors... (experimental)"
     putStrLn $ "Scale factors are: " ++ show (getScales cfg)
     putStrLn "Computing IFS..."
     putStrLn $ "I'm going to write to file '" ++ ifsfile ++ "'."
-    writeImageFile cfg ifsfile (ifsPoints cfg)
+    let pxs = rasterize rst <$> ifsPoints cfg
+    writeImageFile cfg ifsfile pxs
     putStrLn "Done writing to file 'ifs_image.png'. Finished IFS routine."
   where ifsfile = "ifs_image.png"
+        ifsFunc (IFSPlot p) = (complexToPair p, Sum 100)
 
-rootsRoutine :: (Real a, Coefficient a) => Config GDColor a -> IO()
+rootsRoutine :: (Integral v, Real a, Coefficient a) 
+             => Config (Sum v) GDColor a -> IO()
 rootsRoutine cfg = do
+    rst <- createRasterizerIO rootFunc cfg
     putStrLn ""
     putStrLn "Roots routine."
     putStrLn "Computing roots."
     putStrLn $ "I'm going to write to file '" ++ rootsfile ++ "'."
-    writeImageFile cfg rootsfile (getRoots cfg)
+    let pxs = rasterize rst <$> getRoots cfg
+    writeImageFile cfg rootsfile pxs
     putStrLn "Done writing to file 'roots_image.png'. Finished roots routine."
   where rootsfile = "roots_image.png"
+        rootFunc (RootPlot _ r) = (complexToPair r, Sum 25)
 
-writeImageFile cfg fn pts = writeImage fn (map fst pxs) res g
-  where pxs = plotPixels cfg pts
-        res = resolution cfg
+writeImageFile :: (Monoid v) => Config v GDColor a -> FilePath 
+               -> [IO (Maybe (RstCoord, v))] -> IO ()
+writeImageFile cfg fn pts = writeImage fn pts res g
+  where res = resolution cfg
         g = gradient cfg
 
 main :: IO()
@@ -60,7 +72,7 @@ main = do
     putStrLn ""
     handleOptions
 
-runAsCmd :: (Mode, Config GDColor Int) -> IO ()
+runAsCmd :: (Integral v) => (Mode, Config (Sum v) GDColor Int) -> IO ()
 runAsCmd (mode, cfg) = do 
     putStrLn ""
     showConfig cfg
@@ -74,7 +86,7 @@ runAsCmd (mode, cfg) = do
     getLine
     putStrLn "Bye!"
 
-runAsGui :: (Mode, Config RGB8 Int) -> IO ()
+runAsGui :: (Integral v) => (Mode, Config (Sum v) RGB8 Int) -> IO ()
 runAsGui (mode, cfg) = do
     showConfig cfg
     putStrLn "    Starting GUI..."
@@ -96,7 +108,8 @@ askYN s = do
 alwaysError :: IOException -> IO(Maybe a)
 alwaysError = \_ -> return Nothing
 
-parseConfigFile :: (RGB c, Coefficient a) => IO (Maybe (Mode, Config c a))
+parseConfigFile :: (Integral v, RGB c, Coefficient a) 
+                => IO (Maybe (Mode, Config (Sum v) c a))
 parseConfigFile = do
     file' <- handle (alwaysError) ((fmap Just) $ (openFile "roots.ini" ReadMode))
     case file' of
@@ -104,14 +117,14 @@ parseConfigFile = do
         Just file -> do strings <- (fmap lines) $ hGetContents file
                         return $ parseMConfig (take 7 strings)
 
--- handleOptions :: IO (Mode, Config Int)
+handleOptions :: IO ()
 handleOptions = do
     args <- getArgs
     case args of
         ("gui":args') -> parseGuiArgs $ parseMConfig args'
         _             -> parseCmdArgs $ parseMConfig args
 
--- parseGuiArgs :: IO (Mode, Config Int)
+parseGuiArgs :: (Integral v) => Maybe (Mode, Config (Sum v) RGB8 Int) -> IO ()
 parseGuiArgs (Just cfg) = putStrLn "Using command line args." >> runAsGui cfg
 parseGuiArgs Nothing    = do 
     cfg' <- parseConfigFile
@@ -119,6 +132,7 @@ parseGuiArgs Nothing    = do
         Nothing  -> putStrLn "No valid config file found. (roots.ini)"
         Just cfg -> runAsGui cfg
 
+parseCmdArgs :: (Integral v) => Maybe (Mode, Config (Sum v) GDColor Int) -> IO ()
 parseCmdArgs (Just cfg) = putStrLn "Using command line args." >> runAsCmd cfg
 parseCmdArgs Nothing    = do 
     cfg' <- parseConfigFile
