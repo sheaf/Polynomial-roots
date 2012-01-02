@@ -4,14 +4,15 @@ who might have roots in a particular rectangle in the complex plane,
 using tree pruning.
 
 To do:
-1) Fix parsing (ordering of questions, etc).
-2) Allow non-monochrome images.
-3) Figure out proper scaling constants.
-4) Optimisation.
-5) Investigate better bounds. -}
+1) Fix parsing (choice of type of coefficients).
+2) polySolve not allowing complex coefficients.
+3) Optimisation.
+4) Investigate better bounds. 
+5) Clean up gradients, and make some nicer ones (sunset purple-orange-yellow).-}
 
 {-# LANGUAGE TypeFamilies, TypeSynonymInstances,
              FlexibleContexts, FlexibleInstances #-}
+
 module Main where
 
 import Control.Applicative
@@ -20,8 +21,6 @@ import Data.Char(toLower)
 import Data.Complex
 import Data.List
 import Data.Maybe
--- import Foreign.C.Types(CInt)
--- import qualified Graphics.GD.ByteString.Lazy as GD
 import System.Environment(getArgs)
 import System.IO
 
@@ -111,15 +110,21 @@ parseConfigFile = do
 parseOptions :: IO((Mode,Config Int))
 parseOptions = do
     args' <- fmap parseMConfig getArgs
-    cfg' <- parseConfigFile
-    ans <- askYN "Valid config file found. Use config file? (y/n) "
-    case (args',cfg',ans) of
-        (Just args,_,_) -> do putStrLn "Using command line args."
-                              return args
-        (_,Nothing,_) ->   do putStrLn "No valid config file found. (roots.ini)"
-                              askConfig
-        (_,Just cfg,True)->return cfg
-        otherwise ->       do askConfig
+    case args' of
+        Just args -> do
+            putStrLn "Using command line args."
+            return args
+        Nothing -> do
+            cfg' <- parseConfigFile
+            case cfg' of
+                Nothing -> do 
+                    putStrLn "No valid config file found. (roots.ini)"
+                    askConfig
+                Just cfg -> do
+                    ans <- askYN "Valid config file found. Use config file? (y/n) "
+                    if ans 
+                        then return cfg
+                        else askConfig 
 
 askConfig :: Coefficient a => IO((Mode,Config a))
 askConfig = do
@@ -160,9 +165,10 @@ showConfig (Config ic (rx,ry) d c w grad)= do
 ifsRoutine :: Coefficient a => Config a -> IO()
 ifsRoutine (Config ic (rx,ry) d c w g) = do
     let scales = scaleFactors (Config ic (rx,ry) (d+8) c (w/ (fromIntegral rx)) g)  
-                    -- bear in mind scaleFactors uses w as an error bound...     
+                    -- bear in mind scaleFactors uses w as an error bound...
+    let ifs = toifs ic c
     --                                          
-    let ifspixels = ifsCounts scales (Config ic (rx,ry) (d+1) c w g)
+    let ifspixels = ifsCounts scales ifs (Config ic (rx,ry) (d+1) c w g)
     --let h = (w* fromIntegral(ry) / (fromIntegral(rx)))::Double
     --let cI = c +! ((-w/2) :+ (-h/2),(w/2) :+ (h/2))
     --let pols = canHaveRoots ic d cI
@@ -172,14 +178,14 @@ ifsRoutine (Config ic (rx,ry) d c w g) = do
     let ifsfile = "ifs_image.png"
     putStrLn ""
     putStrLn "IFS routine."
-    putStrLn "Computing scale factors..."
+    putStrLn "Computing scale factors... (experimental)"
     putStrLn("Scale factors are: "++(show scales))
     putStrLn "Computing IFS..."
     putStrLn "I'm going to write to file 'ifs_image.png'."
     writeImage ifsfile ifspixels (rx,ry) g
     putStrLn "Done writing to file 'ifs_image.png'. Finished IFS routine."
 
-rootsRoutine :: Coefficient a => Config a -> IO()
+rootsRoutine :: {-Coefficient a =>-} Config Int -> IO()
 rootsRoutine (Config ic (rx,ry) d c w g) = do
     let h = (w* fromIntegral(ry) / (fromIntegral(rx)))::Double
     let cI = c +! ((-w/2) :+ (-h/2),(w/2) :+ (h/2))

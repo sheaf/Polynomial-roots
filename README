@@ -1,0 +1,24 @@
+This program generates images related to roots of polynomials.
+
+There are two main routines:
+
+- Roots.
+This plots roots of polynomials. Given a particular viewing region R in the complex plane,
+a set of coefficients A and a degree d, this plots all roots of polynomials of degree up to d,
+with coefficients in A, within the region R.
+
+- IFS.
+This plots the corresponding iterated function systems, and tries to predict the scale factors
+to make it look like the corresponding plot of roots.
+
+
+The program can parse options at runtime, otherwise it takes in a config file,
+such as the following (no blank line at the beginning):
+
+roots                              Choice of routine (roots/ifs/both)
+[-1,1]                             Set of coefficients
+(400,400)                          Resolution (width,height)
+40                                 Degree
+0.672233 :+ (-0.0921782)           Center (this one produces feather-like patterns) 
+0.00001                            Width 
+warm 12                            Gradient (warm/cold/grey/binary, + possible parameter)

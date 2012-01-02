@@ -1,50 +1,54 @@
 module Plotting where
 
+import Graphics.GD
+import Control.Applicative
 import Data.Complex
 import Types
 import Interval
+import Image
 
 --------------------------------------------------------------------------------
---Gradients and plotting routines.
+--Gradients and plotting.
 
 showGradient :: Gradient -> String
 showGradient = snd
 
---A black-red-yellow-orange-white gradient, with 0 -> black and h -> white.
+--Refactoring of gradients more than welcome.
+
+--A black-red-yellow-white gradient, with 0 -> black and h -> white.
 warm :: Int -> Gradient
-warm h = ((map floor).((map (255*)).warm'), "Warm (height "++show(h)++")")
-    where warm' n 
-            | n <= 0 = [0,0,0]
-            | n >= h = [1,1,1]
-            | (n > 0 && n' <= h'/3) = [3*n'/h',0,0]
-            | (n' > h'/3 && n' <= 2*h'/3) = [1, 3*n'/h'-1,0]
-            | (n'> 2*h'/3 && n < h) = [1,1,3*n'/h'-2]
-                where [h',n'] = map fromIntegral [h,n]
+warm h = (warm'.toRGBA, "Warm (height "++show(h)++")")
+    where d = ceiling(3*255/fromIntegral h)
+          warm' (r,0,0,_) = rgb v1 v2 v3
+            where v1 = minimum [255,r+d]
+                  v2 = maximum [0,r+d-255]
+                  v3 = maximum [0,r+d-511]
+          warm' (255,g,0,_) = rgb 255 v1 v2
+            where v1 = minimum [255,g+d]
+                  v2 = maximum [0,g+d-255]
+          warm' (255,255,b,_) = rgb 255 255 v1
+            where v1 = minimum [255,b+d]   
 
---A black-blue-cyan-white gradient.
+flipRB :: Color -> Color
+flipRB col = rgb r g b
+    where [r,g,b] = (\(a,b,c,d) -> [c,b,a]) $ toRGBA col
+
+--A black-blue-cyan-white gradient, with 0 -> black and h -> white.
 cold :: Int -> Gradient
-cold h = ((map floor).((map (255*)).cold'), "Cold (height "++show(h)++")")
-    where cold' n 
-            | n <= 0 = [0,0,0]
-            | n >= h = [1,1,1]
-            | (n > 0 && n' <= h'/3) = [0,0,3*n'/h']
-            | (n' > h'/3 && n' <= 2*h'/3) = [0, 3*n'/h'-1,1]
-            | (n' > 2*h'/3 && n < h) = [3*n'/h'-2,1,1]
-                where [h',n'] = map fromIntegral [h,n]
+cold h = (cold'.toRGBA, "Cold (height "++show(h)++")")
+    where cold' (r,g,b,_) = flipRB $ fst (warm h) (rgb b g r)
+          
+--Binary "gradient".
+binary :: Int -> Gradient
+binary _ = (binary'.toRGBA, "Binary")
+    where binary' _ = rgb 255 255 255
 
---Black to white gradient.
-grey h = ((map floor).((map (255*)).grey'), "Cold (height "++show(h)++")")
-    where grey' n 
-            | n <= 0 = [0,0,0]
-            | n >= h = [1,1,1]
-            | otherwise = [n'/h',n'/h',n'/h']
-                where [h',n'] = map fromIntegral [h,n]
-
---Binary black or white gradient.
-binary h = ((map floor).((map (255*)).binary'), "Cold (height "++show(h)++")")
-    where binary' n 
-            | n < h = [0,0,0]
-            | otherwise = [1,1,1]
+--A black to white gradient.
+grey :: Int -> Gradient
+grey h = (grey'.toRGBA, "Grey (height "++show(h)++")")
+    where d = ceiling(255/fromIntegral h)
+          grey' (a,_,_,_) = rgb b b b
+            where b = minimum [255,a+d]
 
 toCoords :: [Root] -> Resolution -> Center -> Width -> [Pixel]
 toCoords roots (rx,ry) c w  = map (\z -> ( floor(realPart z), floor(imagPart z)))
