@@ -1,0 +1,23 @@
+Name:                polynomial-roots
+Version:             0.1
+Synopsis:            Generates images related to roots of polynomials
+Description:         Explore plots of polynomial roots on the complex plane and
+                     their relationship to iterated function systems.
+                     
+                     Currently very incomplete.
+Homepage:            https://github.com/isomorphism/Polynomial-roots
+License:             OtherLicense
+License-file:        LICENSE
+Author:              Sam Derbyshire & C. A. McCann
+Maintainer:          cam@uptoisomorphism.net
+Category:            Math
+Build-type:          Simple
+Cabal-version:       >=1.2
+
+Executable polynomial-roots
+  Main-is:           Main.hs
+  Build-depends:     base >= 4 && < 5,
+                     SDL >= 0.6,
+                     SDL-image >= 0.6,
+                     gd >= 3000,
+                     hmatrix >= 0.12

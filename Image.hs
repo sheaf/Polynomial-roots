@@ -7,20 +7,20 @@ import Types
 --Image writing.
 
 --this possibly flips the image, check!!
-writePixel:: GD.Image -> Pixel -> Gradient -> IO()
+writePixel:: GD.Image -> Pixel -> Gradient GD.Color -> IO()
 writePixel image (px,py) (grad,_) = do
     --make this non-monochrome!!
     col <- GD.getPixel (px,py) image
     let col' = grad col
     GD.setPixel (px,py) col' image
 
-writePixels :: GD.Image -> [Pixel] -> Gradient -> IO()
+writePixels :: GD.Image -> [Pixel] -> Gradient GD.Color -> IO()
 writePixels image p g
     | null p = return()
     | otherwise = do writePixel image (head p) g
                      writePixels image (tail p) g
 
-writeImage :: FilePath -> [Pixel] -> Resolution -> Gradient -> IO()
+writeImage :: FilePath -> [Pixel] -> Resolution -> Gradient GD.Color -> IO()
 writeImage file pixels (rx,ry) (grad,s) = do
     let pixels' = map (\(px,py) -> (px,ry-py)) pixels 
     image <- GD.newImage (rx,ry)
