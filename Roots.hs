@@ -35,6 +35,7 @@ prune :: (Coefficient a) =>
            -> CoefficientTree a -> CoefficientTree a
 prune _ _ _ Empty = Empty
 prune coeffs cI p (Node c r [])
+    | 1 `elemI` (absI cI) = Node c True []
     |(0 `elemI` values) = Node c True []
     |((absI $ values ) `intersects` (bound coeffs (length p) cI)) = Node c False []
         --note: length p is the degree of c:p
@@ -98,10 +99,19 @@ colourFunction' polys (Config _ (rx,ry) w c (grad,_)) (px,py) = col
           col = grad (length roots)
 -}
 
-rootList :: --(Coefficient a) => 
-            [Polynomial Int] -> Resolution -> Center -> Width -> [Pixel]
+rootList :: (Real a, Coefficient a) 
+         => [Polynomial a] -> Resolution -> Center -> Width -> [Pixel]
 rootList polys (rx,ry) c w  = coordlist
     where rx' = fromIntegral rx
           rootlist= concat $ map findRoots
-                           $ map (map fromIntegral) polys
+                           $ map (map realToFrac) polys
           coordlist = toCoords rootlist (rx,ry) c w
+
+
+rootsPixels (Config ic (rx,ry) d c w g) = rootspixels
+  where h = (w* fromIntegral(ry) / (fromIntegral(rx)))::Double
+        cI = c +! ((-w/2) :+ (-h/2),(w/2) :+ (h/2))
+        polys = canHaveRoots ic d cI
+        rootspixels = rootList polys (rx,ry) c w
+
+
