@@ -49,7 +49,7 @@ rootsRoutine cfg = do
     putStrLn "Done writing to file 'roots_image.png'. Finished roots routine."
   where rootsfile = "roots_image.png"
 
-writeImageFile cfg fn pts = writeImage fn pxs res g
+writeImageFile cfg fn pts = writeImage fn (map fst pxs) res g
   where pxs = plotPixels cfg pts
         res = resolution cfg
         g = gradient cfg

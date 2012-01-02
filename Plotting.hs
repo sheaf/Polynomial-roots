@@ -7,6 +7,7 @@ import qualified Graphics.GD as GD
 import Control.Applicative
 import Data.Complex
 import Data.Word
+import Data.List
 import Types
 import Interval
 import Image
@@ -93,28 +94,40 @@ grey h = (grey'.splitRGB , "Grey (height "++show(h)++")")
 --------------------------------------------------------------------------------
 -- Plotting
 
-plotPixels :: (Plot a, CoeffType a ~ b, Coefficient b) 
-           => Config c b -> [a] -> [Pixel]
-plotPixels cfg xs = toPixels cfg xs
+-- plotPixels :: (Plot a, CoeffType a ~ b, Coefficient b) 
+--            => Config c b -> [a] -> [Pixel]
+-- plotPixels cfg xs = toPixels cfg xs
 
 
 data RootPlot a = RootPlot (Polynomial a) Root
 newtype IFSPlot a = IFSPlot (Complex Double)
 
+type PixelOrig = Integer
+
+type PlotData = (Pixel, PixelOrig)
+
 class Plot a where
     type CoeffType a :: *
-    toPixels :: Config c (CoeffType a) -> [a] -> [Pixel]
+    toPixels   :: Config c (CoeffType a) -> [a] -> [Pixel]
+    toOrig     :: Config c (CoeffType a) -> [a] -> [PixelOrig]
+    plotPixels :: Config c (CoeffType a) -> [a] -> [PlotData]
+    toPixels cfg xs = fst <$> plotPixels cfg xs
+    toOrig cfg xs = snd <$> plotPixels cfg xs
 
 instance (Real a, Coefficient a) => Plot (RootPlot a) where
     type CoeffType (RootPlot a) = a
-    toPixels (Config ic res d c w g) rs = toCoords roots' res c w
-      where getRoot (RootPlot _ root) = root
-            roots' = map getRoot rs
+    plotPixels (Config ic res d c w g) rs = zip roots origs
+      where getPlot (RootPlot _ root) = root
+            getOrig (RootPlot orig _) = encodeCoeffs orig
+            roots = toCoords (map getPlot rs) res c w
+            origs = map getOrig rs
+            encodeCoeffs = foldl' (\x y -> x * 2 + if y <= 0 then 0 else 1) 0
 
 instance Plot (IFSPlot a) where
     type CoeffType (IFSPlot a) = a
-    toPixels (Config _ res _ _ w _) pts = toCoords (getPt <$> pts) res (0:+0) w
-      where getPt (IFSPlot p) = p
+    plotPixels (Config _ res _ _ w _) pts = zip points (repeat 1)
+      where getPlot (IFSPlot p) = p
+            points = toCoords (getPlot <$> pts) res (0:+0) w
 
 toCoords :: [Root] -> Resolution -> Center -> Width -> [Pixel]
 toCoords roots (rx,ry) c w  = map (\z -> ( floor(realPart z), floor(imagPart z)))

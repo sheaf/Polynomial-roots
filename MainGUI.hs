@@ -37,9 +37,9 @@ endSDL :: IO ()
 endSDL = SDL.quit
 
 runMainLoop :: (Real a, Coefficient a ) => Mode -> Config RGB8 a -> IO ()
-runMainLoop mode cfg = do mainLoop (gradient cfg) (getPixels mode cfg)
+runMainLoop mode cfg = do mainLoop cfg (getPixels mode cfg)
 
-getPixels :: (Real a, Coefficient a ) => Mode -> Config c a -> [Pixel]
+getPixels :: (Real a, Coefficient a ) => Mode -> Config c a -> [PlotData]
 getPixels Roots cfg = plotPixels cfg (getRoots cfg)
 getPixels IFS cfg = plotPixels cfg (ifsPoints cfg)
 getPixels Both cfg = interleave rootsPxs (offset <$> ifsPxs)
@@ -49,15 +49,33 @@ getPixels Both cfg = interleave rootsPxs (offset <$> ifsPxs)
         interleave (x:xs) (y:ys) = x:y:interleave xs ys
         interleave [] ys = ys
         interleave xs [] = xs
-        offset (x, y) = (x + rx, y)
+        offset ((x, y), o) = ((x + rx, y), o)
 
+drawPixel :: Gradient RGB8 -> SDL.Surface -> (Pixel, PixelOrig) -> IO ()
+drawPixel g surf (xy,o) = mapPixel xy (fst g) surf
 
-drawPixel g surf xy = mapPixel xy (fst g) surf
+mainLoop :: Config RGB8 a -> [PlotData] -> IO ()
+mainLoop cfg xs = do xs' <- withMinDelay 5 (timedDraw (gradient cfg) 5 xs)
+                     handleEvents cfg xs' =<< newEvents
 
-mainLoop :: Gradient RGB8 -> [XY] -> IO ()
-mainLoop g xs = do xs' <- withMinDelay 5 (timedDraw g 5 xs)
-                   done <- any (== Quit) <$> newEvents
-                   if done then return () else mainLoop g xs'
+handleEvents :: Config RGB8 a -> [PlotData] -> [Event] -> IO ()
+handleEvents cfg xs evs | done      = return ()
+                        | otherwise = do mapM_ (handleClicks cfg) clicks
+                                         mainLoop cfg xs
+  where done = any (== Quit) evs
+        clicks = mapMaybe getClick evs
+
+getClick (MouseButtonDown x y SDL.ButtonLeft) = Just (x, y)
+getClick _ = Nothing
+
+handleClicks :: Config RGB8 a -> (Word16, Word16) -> IO ()
+handleClicks (Config ic (rx,ry) d c w g) (x, y) = print (xy + c)
+  where [x', y'] = fromIntegral <$> [x, y]
+        [rx', ry'] = fromIntegral <$> [rx, ry]
+        h = w * ry'/rx' 
+        xy = ((x' / rx' - 0.5) * w) :+ ((y' / ry' - 0.5) * h)
+        
+        
 
 withMinDelay :: Time -> IO a -> IO a
 withMinDelay dt x = do t1 <- SDL.getTicks
@@ -69,7 +87,7 @@ delayUntil t = do cur <- SDL.getTicks
                   when (cur < t) (SDL.delay $ t - cur)
 
 
-timedDraw :: Gradient RGB8 -> Time -> [XY] -> IO [XY]
+timedDraw :: Gradient RGB8 -> Time -> [PlotData] -> IO [PlotData]
 timedDraw _ _ [] = return []
 timedDraw g dt xs = do cur <- SDL.getTicks
                        s <- SDL.getVideoSurface
@@ -77,7 +95,7 @@ timedDraw g dt xs = do cur <- SDL.getTicks
                        SDL.flip s
                        when (null xs') (putStrLn "Plotting complete.")
                        return xs'
-                     
+                    
 
 untilTime _ _ [] _ = return []
 untilTime f t (x:xs) y = do f y x
@@ -86,7 +104,4 @@ untilTime f t (x:xs) y = do f y x
 
 newEvents :: IO [Event]
 newEvents = unfoldActionM (justIf (/= NoEvent) <$> SDL.pollEvent)
-
--- waitQuit = do evs <- newEvents
---               if any (== Quit) evs then return () else SDL.delay 80 >> waitQuit
 
