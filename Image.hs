@@ -20,8 +20,8 @@ writePixels image p g
 
 writeImage :: FilePath -> [Pixel] -> Resolution -> Gradient GD.Color -> IO()
 writeImage file pixels (rx,ry) (grad,s) = do
-    let pixels' = map (\(px,py) -> (px,ry-py)) pixels 
-    image <- GD.newImage (rx,ry)     -- ^^ makes sure y-coord is not flipped
+    let pixels' = map (\(px,py) -> (px,py)) pixels 
+    image <- GD.newImage (rx,ry)
     let col = 0 --change for other gradients!!
     GD.fillImage col image
     writePixels image pixels' (grad,s)
