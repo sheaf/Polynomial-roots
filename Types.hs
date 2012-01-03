@@ -11,10 +11,6 @@ import Data.Complex
 
 type Degree = Int
 
---Intervals. More involved interval arithmetic later.
-type RealInterval = (Double,Double)
-type ComplexInterval = (Complex Double,Complex Double)
-
 --Polynomials. Constant coefficient is the 0th term.
 --Have to be able to coerce coefficients into the complex numbers,
 --for polynomial evaluation.

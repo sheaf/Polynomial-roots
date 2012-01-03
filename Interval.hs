@@ -3,6 +3,8 @@
 module Interval where
 
 import Types
+import Data.Maybe
+import Control.Applicative
 
 --------------------------------------------------------------------------------
 --Interval arithmetic.
@@ -10,20 +12,31 @@ import Types
 class (Fractional a, Fractional (Scalar a)) => Interval a where
     type Scalar a :: *
     intersects :: a -> a -> Bool
+    intersect :: a -> a -> Maybe a
+    intersects i j = not $ isNothing $ intersect i j
     elemI :: Scalar a -> a -> Bool
     (+!) :: Scalar a -> a -> a
+    c +! i = fromScalar(c) + i
     (!+) :: a -> Scalar a -> a
     (!+) = flip (+!)
     (-!) :: Scalar a -> a -> a
+    c -! i = fromScalar(c) - i
     (!-) :: a -> Scalar a -> a
     (!-) = (!+).negate
     (*!) :: Scalar a -> a -> a
+    c *! i = fromScalar(c) * i
     (!*) :: a -> Scalar a -> a
     (!*) = flip (*!)
     (/!) :: Scalar a -> a -> a
+    c /! i = fromScalar(c) / i
     (!/) :: a -> Scalar a -> a
     x !/ y = x !* recip(y)
     fromScalar :: Scalar a -> a
+
+--------------------------------------------------------------------------------
+--Real intervals, [a,b] = { x : a <= x <= b}.
+
+type RealInterval = (Double,Double)
 
 instance Num RealInterval where
     (x1,y1) + (x2,y2) = (x1+x2,y1+y2)
@@ -44,7 +57,10 @@ instance Fractional RealInterval where
 
 instance Interval RealInterval where
     type Scalar RealInterval = Double
-    intersects (x1,y1) (x2,y2) = (x1 <= x2 && y1 >= x1)||(x1 >= x2 && x1 <= y2)
+    intersect (x1,y1) (x2,y2)
+        | (x1 <= x2 && y1 >= x2) = Just (x2, minimum[y1,y2])
+        | (x1 >= x2 && x1 <= y2) = Just (x1, minimum[y1,y2])
+        | otherwise = Nothing
     a `elemI` (x1,y1) = (a >= x1 && a <= y1)
     a +! (x1,y1) = (x1+a,y1+a)
     a -! (x1,y1) = (a-y1,a-x1)
@@ -54,6 +70,11 @@ instance Interval RealInterval where
         | a == 0 = (0,0)
     a /! (x1,y1) = a *! (recip(y1), recip(x1))
     fromScalar a = (a,a)
+    
+--------------------------------------------------------------------------------
+--Rectangular complex intervals, given by lower left and upper right corners.
+
+type ComplexInterval = (Complex Double,Complex Double)
 
 minabsI :: ComplexInterval -> Double
 minabsI (z,w)
@@ -76,7 +97,7 @@ maxabsI (z,w) = sqrt $ maximum [x*x+y*y,x*x+y'*y',x'*x'+y*y,x'*x'+y'*y']
           y'= imagPart w
 
 absI :: ComplexInterval -> RealInterval
-absI (z,w) = (minabsI (z,w),maxabsI (z,w) )
+absI (z,w) = (minabsI(z,w),maxabsI(z,w))
 
 instance Num ComplexInterval where
     (z1,w1) + (z2,w2) = (z1+z2,w1+w2)
@@ -103,18 +124,21 @@ instance Fractional ComplexInterval where
 
 instance Interval ComplexInterval where
     type Scalar ComplexInterval = Complex Double
-    intersects (z1,w1) (z2,w2) = let
+    intersect (z1,w1) (z2,w2) = let
                 [x1,x1',x2,x2'] = (map realPart) [z1,w1,z2,w2]
                 [y1,y1',y2,y2'] = (map imagPart) [z1,w1,z2,w2]
-              in (intersects (x1,x1') (x2,x2'))&&(intersects (y1,y1') (y2,y2'))
+                ix = (intersect (x1,x1') (x2,x2'))
+                iy = (intersect (y1,y1') (y2,y2')) in
+                (\(x,x') (y,y') -> (x:+y, x':+y')) <$> ix <*> iy 
     fromScalar(c) = (c,c)
     c `elemI` (z1,w1) = (realPart z1 <= realPart c && realPart c <= realPart w1)
                     && (imagPart z1 <= imagPart c && imagPart c <= imagPart w1)
     c +! (z,w) = (z+c,w+c)
     c -! (z,w) = (c-w,c-z)
-    c *! (z,w) = fromScalar(c) * (z,w) --laziness
-    c /! (z,w) = error "Division by ComplexInterval not defined"
+    
+--------------------------------------------------------------------------------
 
+--Evaluation of polynomials on intervals.
 evaluateI :: (Coefficient a, Interval b, a ~ Scalar b)
              => Polynomial a -> b -> b
 evaluateI (a:as) z = a +! (z * (evaluateI as z))
