@@ -15,19 +15,19 @@ toifs coeffs c = (toifs' coeffs c, [c])
 
 scaleFactors :: (Coefficient a) => Config c a -> [Complex Double]
 scaleFactors (Config ic (rx,_) d c eps _) = 
-                filterClose (0.2) allscalings
+                filterClose (0.1) allscalings
                           -- ^^ random constant, tweaking necessary
     where allscalings = (map $ (negate . recip . (flip evaluate c)) . derivative . (map toComplex)) (canHaveRoots ic d cI)
           cI = c +! ((-eps):+(-eps),eps:+eps)
 
 ifsCheatCounts :: (Coefficient a) => 
-                  [Complex Double] -> [Polynomial a] -> Config c a -> [Pixel]
-ifsCheatCounts scales pols (Config _ res d c w _) = toCoords points res (0:+0) w
+                  [Complex Double] -> [Polynomial a] -> Config c a -> [Complex Double]
+ifsCheatCounts scales pols (Config _ res d c w _) = points
     where points' = map (\pol -> (evaluate pol c)) (map (map toComplex) pols)
           points = case scales of
                         [] -> points'
                         otherwise -> (\x -> map (x*) scales) =<< points'
-           
+
 ifsIterates :: Iterations -> IFS -> [Complex Double]
 ifsIterates 0 (fs,vals) = vals
 ifsIterates n (fs,vals) = fs =<< (ifsIterates (n-1) (fs,vals))
@@ -49,8 +49,8 @@ ifsPoints cfg@(Config ic (rx,ry) d c w g) = map IFSPlot ifspoints
   where scales = getScales cfg
         ifs = toifs ic c
         ifspoints = ifsCounts scales ifs (Config ic (rx,ry) (d+1) c w g)
-    --let h = (w* fromIntegral(ry) / (fromIntegral(rx)))::Double
-    --let cI = c +! ((-w/2) :+ (-h/2),(w/2) :+ (h/2))
-    --let pols = canHaveRoots ic d cI
-    --let ifspixels = ifsCheatCounts scales pols (Config ic (rx,ry) d c w g)
+        --h = (w* fromIntegral(ry) / (fromIntegral(rx)))::Double
+        --cI = c +! ((-w/2) :+ (-h/2),(w/2) :+ (h/2))
+        --pols = canHaveRoots ic d cI
+        --ifspoints = ifsCheatCounts scales pols (Config ic (rx,ry) d c w g)
 
