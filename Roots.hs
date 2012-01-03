@@ -37,10 +37,12 @@ prune _ _ _ Empty = Empty
 prune coeffs cI p (Node c r [])
     | 1 `elemI` (absI cI) = Node c True []
     |(0 `elemI` values) = Node c True []
-    |((absI $ values ) `intersects` (bound coeffs (length p) cI)) = Node c False []
+    |((absD $ values ) `intersects` (bound coeffs (length p) cI)) = Node c False []
         --note: length p is the degree of c:p
     |otherwise = Empty
-        where values = evaluateI (map toComplex $ p ++ [c]) cI
+        where dI = rectToDisk cI
+              values = evaluateD (map toComplex $ p ++ [c]) dI
+              --evaluateD prunes more efficiently than evaluateI
 prune coeffs cI p (Node c r t)
     |(prunedT == []) = Empty
     |otherwise = Node c r prunedT
