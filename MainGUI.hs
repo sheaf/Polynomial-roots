@@ -37,7 +37,7 @@ endSDL :: IO ()
 endSDL = SDL.quit
 
 runMainLoop :: (Real a, Coefficient a ) => Mode -> Config RGB8 a -> IO ()
-runMainLoop mode cfg = do mainLoop cfg (getPixels mode cfg)
+runMainLoop mode cfg = do mainLoop mode cfg (getPixels mode cfg)
 
 getPixels :: (Real a, Coefficient a ) => Mode -> Config c a -> [PlotData]
 getPixels Roots cfg = plotPixels cfg (getRoots cfg)
@@ -54,28 +54,34 @@ getPixels Both cfg = interleave rootsPxs (offset <$> ifsPxs)
 drawPixel :: Gradient RGB8 -> SDL.Surface -> (Pixel, PixelOrig) -> IO ()
 drawPixel g surf (xy,o) = mapPixel xy (fst g) surf
 
-mainLoop :: Config RGB8 a -> [PlotData] -> IO ()
-mainLoop cfg xs = do xs' <- withMinDelay 5 (timedDraw (gradient cfg) 5 xs)
-                     handleEvents cfg xs' =<< newEvents
+mainLoop :: Mode -> Config RGB8 a -> [PlotData] -> IO ()
+mainLoop mode cfg xs = do xs' <- withMinDelay 5 (timedDraw (gradient cfg) 5 xs)
+                          handleEvents mode cfg xs' =<< newEvents
 
-handleEvents :: Config RGB8 a -> [PlotData] -> [Event] -> IO ()
-handleEvents cfg xs evs | done      = return ()
-                        | otherwise = do mapM_ (handleClicks cfg) clicks
-                                         mainLoop cfg xs
+handleEvents :: Mode -> Config RGB8 a -> [PlotData] -> [Event] -> IO ()
+handleEvents mode cfg xs evs | done      = return ()
+                             | otherwise = do mapM_ (handleClicks mode cfg) clicks
+                                              mainLoop mode cfg xs
   where done = any (== Quit) evs
         clicks = mapMaybe getClick evs
 
 getClick (MouseButtonDown x y SDL.ButtonLeft) = Just (x, y)
 getClick _ = Nothing
 
-handleClicks :: Config RGB8 a -> (Word16, Word16) -> IO ()
-handleClicks (Config ic (rx,ry) d c w g) (x, y) = print (xy + c)
+handleClicks :: Mode -> Config RGB8 a -> (Word16, Word16) -> IO ()
+handleClicks mode (Config ic (rx,ry) d c w g) (x, y) = print xy
   where [x', y'] = fromIntegral <$> [x, y]
         [rx', ry'] = fromIntegral <$> [rx, ry]
-        h = w * ry'/rx' 
-        xy = ((x' / rx' - 0.5) * w) :+ ((y' / ry' - 0.5) * h)
-        
-        
+        y'' = ry' - y'
+        h = w * ry'/rx'
+        xy' = case (x' <= rx') of
+                   True ->  ((x' / rx' - 0.5) * w) :+ ((y'' / ry' - 0.5) * h)
+                   False ->  (((x'-rx') / rx' - 0.5) * w) :+ ((y'' / ry' - 0.5) * h)
+        xy = case (mode, x' <= rx') of
+                  (Roots,_) ->  xy' + c
+                  (IFS,_) -> xy'
+                  (Both, True) -> xy' + c
+                  (Both, False) -> xy'          
 
 withMinDelay :: Time -> IO a -> IO a
 withMinDelay dt x = do t1 <- SDL.getTicks
