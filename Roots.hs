@@ -78,7 +78,10 @@ canHaveRoots coeffs d cI = getPolynomials $ constructTree coeffs d cI
 --Root finding: GSL library.
 
 findRoots :: Polynomial Double -> [Root]
-findRoots = polySolve
+findRoots p
+    | null p' = []
+    | otherwise = polySolve p'
+        where p' = reverse . dropWhile (==0) . reverse $ p
 
 --------------------------------------------------------------------------------
 --Plotting sets of roots.
