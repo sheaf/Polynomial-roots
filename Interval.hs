@@ -8,6 +8,7 @@ import Control.Applicative
 
 --------------------------------------------------------------------------------
 --Interval arithmetic.
+--Inexact operations (which introduce spurious results) are indicated.
 
 class (Fractional a, Fractional (Scalar a)) => Interval a where
     type Scalar a :: *
@@ -40,7 +41,6 @@ type RealInterval = (Double,Double)
 
 instance Num RealInterval where
     (x1,y1) + (x2,y2) = (x1+x2,y1+y2)
-    (x1,y1) - (x2,y2) = (x1-y2,y1-x2)
     (x1,y1) * (x2,y2) = (mini, maxi)
         where mini = minimum [x1*x2,x1*y2,y1*x2,y1*y2]
               maxi = maximum [x1*x2,x1*y2,y1*x2,y1*y2]
@@ -101,8 +101,7 @@ absI (z,w) = (minabsI(z,w),maxabsI(z,w))
 
 instance Num ComplexInterval where
     (z1,w1) + (z2,w2) = (z1+z2,w1+w2)
-    (z1,w1) - (z2,w2) = (z1-w2,w1-z2)
-    (z1,w1) * (z2,w2) = let
+    (z1,w1) * (z2,w2) = let --inexact.
               mini = (minimum b1 - maximum b2) :+ (minimum b3 + minimum b4)
               maxi = (maximum b1 - minimum b2) :+ (maximum b3 + maximum b4)
               [b1,b2,b3,b4] = [[x1*x2,x1'*x2,x1*x2',x1'*x2'],
@@ -137,9 +136,52 @@ instance Interval ComplexInterval where
     c -! (z,w) = (c-w,c-z)
     
 --------------------------------------------------------------------------------
+--Disk complex intervals, given by center and radius.
 
---Evaluation of polynomials on intervals.
+type Disk = (Complex Double, Double)
+
+instance Num Disk where
+    (c1,r1) + (c2,r2) = (c1+c2,r1+r2)
+    negate (c,r) = (negate c, r)
+    (c1,r1) * (c2,r2) = ( c1*c2, magnitude(c1) * r2 + magnitude(c2)*r1 + r1*r2)
+    -- ^^ inexact; try exact version too
+    abs (c,r) = (realToFrac $ magnitude c + r, 0)
+    signum = error "No signum definition for Disk"
+    fromInteger n = (fromInteger n::Complex Double, 0)
+    
+instance Fractional Disk where
+    recip (c, r) = (c', r')
+        where m = (magnitude c)^2 - r^2
+              c' = conjugate c / realToFrac m
+              r' = r / m
+    fromRational q = (fromRational q::Complex Double, 0)
+
+instance Interval Disk where
+    type Scalar Disk = Complex Double
+    intersects (c1,r1) (c2,r2) = (magnitude (c1-c2)) <= (r1+r2)
+    intersect = error "Intersection of disks is not a disk"
+    z `elemI` (c,r) = magnitude (z - c) <= r
+    fromScalar z = (z,0)
+    
+--------------------------------------------------------------------------------
+
+--Gives the coefficients of the taylor expansion of p centered at c.
+taylor :: (Coefficient a, Fractional a) => 
+          Polynomial a -> a -> Polynomial a
+taylor p c = zipWith (/) derivs facts 
+            where derivs = map (flip evaluate c) $ takeWhile (not.null) $ iterate derivative p
+                  facts = map fromIntegral $ scanl (\x y -> x*y) 1 [1..]
+
+--Evaluation of polynomials on intervals, using Horner scheme.
 evaluateI :: (Coefficient a, Interval b, a ~ Scalar b)
              => Polynomial a -> b -> b
 evaluateI (a:as) z = a +! (z * (evaluateI as z))
 evaluateI [] z = 0
+
+--Evaluation of polynomials on disks, always producing less spurious results.
+--That is, evaluateD p d is always a subset of evaluateI p d
+evaluateD :: (a ~ Complex Double) => Polynomial a -> Disk -> Disk
+evaluateD p (c,r) = (c',r')
+    where c' = evaluate p c
+          r' = evaluate (map magnitude $ 0 : (drop 1 (taylor p c))) r
+
