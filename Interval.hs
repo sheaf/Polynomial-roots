@@ -144,7 +144,7 @@ instance Num Disk where
     (c1,r1) + (c2,r2) = (c1+c2,r1+r2)
     negate (c,r) = (negate c, r)
     (c1,r1) * (c2,r2) = ( c1*c2, magnitude(c1) * r2 + magnitude(c2)*r1 + r1*r2)
-    -- ^^ inexact; try exact version too
+    --  ^^ inexact; try exact version too 
     abs (c,r) = (realToFrac $ magnitude c + r, 0)
     signum = error "No signum definition for Disk"
     fromInteger n = (fromInteger n::Complex Double, 0)
@@ -163,6 +163,11 @@ instance Interval Disk where
     z `elemI` (c,r) = magnitude (z - c) <= r
     fromScalar z = (z,0)
     
+absD :: Disk -> RealInterval
+absD (c,r) = (min,max)
+    where min = maximum[0, magnitude(c)-r]
+          max = magnitude(c) + r
+
 --------------------------------------------------------------------------------
 
 --Gives the coefficients of the taylor expansion of p centered at c.
@@ -185,3 +190,24 @@ evaluateD p (c,r) = (c',r')
     where c' = evaluate p c
           r' = evaluate (map magnitude $ 0 : (drop 1 (taylor p c))) r
 
+--------------------------------------------------------------------------------
+--Conversions between complex intervals (introduces spurious results),
+--and other useful functions.
+
+rectToDisk :: ComplexInterval -> Disk
+rectToDisk (z,w) = (c,r)
+    where c = (z+w)/2
+          r = magnitude $ (w-z)/2
+
+diskToRect :: Disk -> ComplexInterval
+diskToRect (c,r) = (z,w)
+    where z = c - r'*(1:+1)
+          w = c + r'*(1:+1)
+          r' = realToFrac r
+          
+scaleDisk :: Disk -> Double -> Disk
+scaleDisk (c,r) l = (c, r*l)
+
+scaleRect :: ComplexInterval -> Double -> ComplexInterval
+scaleRect (z,w) l = ( (z+w)/2 - k, (z+w)/2 + k)
+    where k = realToFrac l *(w-z)/2
