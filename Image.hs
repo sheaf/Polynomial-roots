@@ -8,7 +8,6 @@ import Rendering.Raster
 --------------------------------------------------------------------------------
 --Image writing.
 
---this possibly flips the image, check!!
 writePixel:: Int -> GD.Image -> Gradient v GD.Color -> (RstCoord, v) -> IO()
 writePixel ry image (grad,_) ((px,py), c) = do
     let col' = grad c
