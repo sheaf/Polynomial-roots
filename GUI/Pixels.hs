@@ -5,7 +5,7 @@ import Control.Monad
 import Foreign
 
 import Graphics.UI.SDL
-import Graphics.UI.SDL.Image
+--import Graphics.UI.SDL.Image
 import Plotting
 
 withLock :: (Surface -> IO a) -> Surface -> IO a
