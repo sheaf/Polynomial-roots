@@ -6,7 +6,8 @@ import Data.Array.MArray
 import Data.Array.IO
 import Data.Monoid
 import Interval
-import Types
+import Types hiding (Config(..))
+import Settings
 import Util
 
 
@@ -56,14 +57,15 @@ rasterize (Rasterizer f rb ibs ar) i | validPoint = Just <$> updateArray
         y = round $ ((iy - iby1) / ibh) * fromIntegral (rbh - 1)
 
 createRasterizerIO :: (Monoid v) => (i -> (InpCoord, v)) 
-                   -> Config v c a -> IO (RasterizerIO i v)
-createRasterizerIO f cfg = mkRasterizer f rb ib
-  where rb@(rx,ry) = resolution cfg
-        [rx', ry'] = fromIntegral <$> [rx, ry]
-        w = width cfg
-        c = center cfg
-        h = w * ry'/rx'
-        szC = w/2 :+ h/2
-        ib = (complexToPair $ c - szC, complexToPair $ c + szC)
+                   -> EnvT IO (RasterizerIO i v)
+createRasterizerIO f =  liftIO . createRst =<< ask
+  where createRst cfg = mkRasterizer f rb ib
+          where rb@(rx,ry) = get resolution cfg
+                [rx', ry'] = fromIntegral <$> [rx, ry]
+                w = get width cfg
+                c = get center cfg
+                h = w * ry'/rx'
+                szC = w/2 :+ h/2
+                ib = (complexToPair $ c - szC, complexToPair $ c + szC)
 
 
