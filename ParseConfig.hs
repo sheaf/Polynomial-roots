@@ -15,7 +15,7 @@ parse :: (Read a) => String -> Maybe a
 parse x
     | null y = Nothing
     | otherwise = Just $ fst (head y)
-        where y = reads(x)
+        where y = reads x
 
 parseToGradient :: (RGB c) => String -> Maybe (Gradient c)
 parseToGradient "" = Nothing

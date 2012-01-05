@@ -80,7 +80,7 @@ runAsGui (mode, cfg) = do
     putStrLn "    Starting GUI..."
     guiMain mode cfg
 
-askYN :: String -> IO(Bool)
+askYN :: String -> IO Bool
 askYN s = do
     putStrLn s
     ans' <- getLine
@@ -94,14 +94,14 @@ askYN s = do
 
 --this should be changed to only accept exception: file doesn't exist...
 alwaysError :: IOException -> IO(Maybe a)
-alwaysError = \_ -> return Nothing
+alwaysError _ = return Nothing
 
 parseConfigFile :: (RGB c, Coefficient a) => IO (Maybe (Mode, Config c a))
 parseConfigFile = do
-    file' <- handle (alwaysError) ((fmap Just) $ (openFile "roots.ini" ReadMode))
+    file' <- handle alwaysError (fmap Just $ openFile "roots.ini" ReadMode)
     case file' of
         Nothing -> return Nothing
-        Just file -> do strings <- (fmap lines) $ hGetContents file
+        Just file -> do strings <- fmap lines $ hGetContents file
                         return $ parseMConfig (take 7 strings)
 
 -- handleOptions :: IO (Mode, Config Int)

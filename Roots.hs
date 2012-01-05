@@ -14,7 +14,7 @@ bound :: (Coefficient a) =>
          IterCoeffs a -> ComplexInterval -> RealBound
 bound cfs cI d
     |1 `elemI` rI = 8 --lousy bound? works for other IterCoeffs?
-    |(fst rI) > 1 = maxcoeff * mini (1 /! rI)
+    |fst rI > 1 = maxcoeff * mini (1 /! rI)
     |otherwise = maxcoeff * mini rI
         where mini rI' = (snd rI')^(d+1) * snd (1 /! (1 -! rI'))
               rI = absI cI
@@ -61,7 +61,7 @@ colourFunction' polys (Config _ (rx,ry) w c (grad,_)) (px,py) = col
 
 getPolys :: (Real a, Coefficient a) => Config c a -> [Polynomial a]
 getPolys (Config ic (rx, ry) d c w _) = canHaveRoots ic d cI
-  where h = (w * fromIntegral ry / fromIntegral rx) -- ::Double
+  where h = w * fromIntegral ry / fromIntegral rx
         cI = c +! ((-w/2) :+ (-h/2), (w/2) :+ (h/2))
 
 polyRoots :: (Real a, Coefficient a) => [Polynomial a] -> [RootPlot a]

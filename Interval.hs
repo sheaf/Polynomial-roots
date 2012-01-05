@@ -14,24 +14,24 @@ class (Fractional a, Fractional (Scalar a)) => Interval a where
     type Scalar a :: *
     intersects :: a -> a -> Bool
     intersect :: a -> a -> Maybe a
-    intersects i j = not $ isNothing $ intersect i j
+    intersects i j = isJust $ intersect i j
     elemI :: Scalar a -> a -> Bool
     (+!) :: Scalar a -> a -> a
-    c +! i = fromScalar(c) + i
+    c +! i = fromScalar c + i
     (!+) :: a -> Scalar a -> a
     (!+) = flip (+!)
     (-!) :: Scalar a -> a -> a
-    c -! i = fromScalar(c) - i
+    c -! i = fromScalar c - i
     (!-) :: a -> Scalar a -> a
     (!-) = (!+).negate
     (*!) :: Scalar a -> a -> a
-    c *! i = fromScalar(c) * i
+    c *! i = fromScalar c * i
     (!*) :: a -> Scalar a -> a
     (!*) = flip (*!)
     (/!) :: Scalar a -> a -> a
-    c /! i = fromScalar(c) / i
+    c /! i = fromScalar c / i
     (!/) :: a -> Scalar a -> a
-    x !/ y = x !* recip(y)
+    x !/ y = x !* recip y
     fromScalar :: Scalar a -> a
 
 --------------------------------------------------------------------------------
@@ -52,23 +52,23 @@ instance Num RealInterval where
     fromInteger n = (fromInteger n::Double,fromInteger n::Double)
 
 instance Fractional RealInterval where
-    (x1,y1) / (x2,y2) = (x1,y1) * (recip(y1),recip(x1))
+    (x1,y1) / (x2,y2) = (x1,y1) * (recip y1,recip x1)
     fromRational q = (fromRational q ::Double, fromRational q::Double)
 
 instance Interval RealInterval where
     type Scalar RealInterval = Double
     intersect (x1,y1) (x2,y2)
-        | (x1 <= x2 && y1 >= x2) = Just (x2, minimum[y1,y2])
-        | (x1 >= x2 && x1 <= y2) = Just (x1, minimum[y1,y2])
+        | x1 <= x2 && y1 >= x2 = Just (x2, minimum[y1,y2])
+        | x1 >= x2 && x1 <= y2 = Just (x1, minimum[y1,y2])
         | otherwise = Nothing
-    a `elemI` (x1,y1) = (a >= x1 && a <= y1)
+    a `elemI` (x1,y1) = a >= x1 && a <= y1
     a +! (x1,y1) = (x1+a,y1+a)
     a -! (x1,y1) = (a-y1,a-x1)
     a *! (x1,y1)
         | a > 0 = (a*x1,a*y1)
         | a < 0 = (a*y1,a*x1)
         | a == 0 = (0,0)
-    a /! (x1,y1) = a *! (recip(y1), recip(x1))
+    a /! (x1,y1) = a *! (recip y1, recip x1)
     fromScalar a = (a,a)
     
 --------------------------------------------------------------------------------
@@ -78,11 +78,11 @@ type ComplexInterval = (Complex Double,Complex Double)
 
 minabsI :: ComplexInterval -> Double
 minabsI (z,w)
-    | (x <=0 && y <= 0 && x' >=0 && y' >=0) = 0
-    | (x <=0 && y <= 0 && x' < 0) = minabsI(-w,-z)
-    | (x <=0 && y <= 0 && y' < 0) = minabsI((-x):+y',(-x'):+y)
-    | (x <= 0 && y > 0) = minabsI(-w,-z)
-    | (x > 0 && y > 0) = sqrt $ x*x+y*y
+    | x <=0 && y <= 0 && x' >=0 && y' >=0 = 0
+    | x <=0 && y <= 0 && x' < 0 = minabsI(-w,-z)
+    | x <=0 && y <= 0 && y' < 0 = minabsI((-x):+y',(-x'):+y)
+    | x <= 0 && y > 0 = minabsI(-w,-z)
+    | x > 0 && y > 0 = sqrt $ x*x+y*y
     | otherwise = x
         where x = realPart z
               y = imagPart z
@@ -108,8 +108,8 @@ instance Num ComplexInterval where
                               [y1*y2,y1'*y2,y1*y2',y1'*y2'],
                               [x1*y2,x1'*y2,x1*y2',x1'*y2'],
                               [y1*x2,y1'*x2,y1*x2',y1'*x2']]
-              [x1,x1',x2,x2'] = (map realPart) [z1,w1,z2,w2]
-              [y1,y1',y2,y2'] = (map imagPart) [z1,w1,z2,w2]
+              [x1,x1',x2,x2'] = map realPart [z1,w1,z2,w2]
+              [y1,y1',y2,y2'] = map imagPart [z1,w1,z2,w2]
               in (mini,maxi)
     negate (z1,w1) = (-w1,-z1)
     abs (z,w) = (minabsI(z,w) :+ 0,maxabsI(z,w) :+ 0)
@@ -124,10 +124,10 @@ instance Fractional ComplexInterval where
 instance Interval ComplexInterval where
     type Scalar ComplexInterval = Complex Double
     intersect (z1,w1) (z2,w2) = let
-                [x1,x1',x2,x2'] = (map realPart) [z1,w1,z2,w2]
-                [y1,y1',y2,y2'] = (map imagPart) [z1,w1,z2,w2]
-                ix = (intersect (x1,x1') (x2,x2'))
-                iy = (intersect (y1,y1') (y2,y2')) in
+                [x1,x1',x2,x2'] = map realPart [z1,w1,z2,w2]
+                [y1,y1',y2,y2'] = map imagPart [z1,w1,z2,w2]
+                ix = intersect (x1,x1') (x2,x2')
+                iy = intersect (y1,y1') (y2,y2') in
                 (\(x,x') (y,y') -> (x:+y, x':+y')) <$> ix <*> iy 
     fromScalar(c) = (c,c)
     c `elemI` (z1,w1) = (realPart z1 <= realPart c && realPart c <= realPart w1)
@@ -143,7 +143,7 @@ type Disk = (Complex Double, Double)
 instance Num Disk where
     (c1,r1) + (c2,r2) = (c1+c2,r1+r2)
     negate (c,r) = (negate c, r)
-    (c1,r1) * (c2,r2) = ( c1*c2, magnitude(c1) * r2 + magnitude(c2)*r1 + r1*r2)
+    (c1,r1) * (c2,r2) = ( c1*c2, magnitude(c1) * r2 + magnitude(c2) * r1 + r1*r2)
     --  ^^ inexact; try exact version too 
     abs (c,r) = (realToFrac $ magnitude c + r, 0)
     signum = error "No signum definition for Disk"
@@ -158,7 +158,7 @@ instance Fractional Disk where
 
 instance Interval Disk where
     type Scalar Disk = Complex Double
-    intersects (c1,r1) (c2,r2) = (magnitude (c1-c2)) <= (r1+r2)
+    intersects (c1,r1) (c2,r2) = magnitude (c1-c2) <= (r1+r2)
     intersect = error "Intersection of disks is not a disk"
     z `elemI` (c,r) = magnitude (z - c) <= r
     fromScalar z = (z,0)
@@ -174,13 +174,13 @@ absD (c,r) = (min,max)
 taylor :: (Coefficient a, Fractional a) => 
           Polynomial a -> a -> Polynomial a
 taylor p c = zipWith (/) derivs facts 
-            where derivs = map (flip evaluate c) $ takeWhile (not.null) $ iterate derivative p
-                  facts = map fromIntegral $ scanl (\x y -> x*y) 1 [1..]
+            where derivs = map (`evaluate` c) $ takeWhile (not.null) $ iterate derivative p
+                  facts = map fromIntegral $ scanl (*) 1 [1..]
 
 --Evaluation of polynomials on intervals, using Horner scheme.
 evaluateI :: (Coefficient a, Interval b, a ~ Scalar b)
              => Polynomial a -> b -> b
-evaluateI (a:as) z = a +! (z * (evaluateI as z))
+evaluateI (a:as) z = a +! (z * evaluateI as z)
 evaluateI [] z = 0
 
 --Evaluation of polynomials on disks, always producing less spurious results.
@@ -188,7 +188,7 @@ evaluateI [] z = 0
 evaluateD :: (a ~ Complex Double) => Polynomial a -> Disk -> Disk
 evaluateD p (c,r) = (c',r')
     where c' = evaluate p c
-          r' = evaluate (map magnitude $ 0 : (drop 1 (taylor p c))) r
+          r' = evaluate (map magnitude $ 0 : drop 1 (taylor p c)) r
 
 --------------------------------------------------------------------------------
 --Conversions between complex intervals (introduces spurious results),
