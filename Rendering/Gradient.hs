@@ -88,7 +88,7 @@ convertCoeffs cfs dfs (c:cs) = case lookup c cfs' of
 toGValue1 :: (Coefficient a) => IterCoeffs a -> Polynomial a -> Double
 toGValue1 cfs p = z * evaluate p' z
     where d = fromIntegral (length cfs) -1
-          p' = convertCoeffs cfs [1..d] p
+          p' = convertCoeffs cfs [0..d] p
           z =  1 / fromIntegral (length cfs)
 
 --This one should be used with gradients such that g(0)=g(1).
