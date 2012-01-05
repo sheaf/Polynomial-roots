@@ -37,7 +37,7 @@ getLeafForest (Node _ f:ns) = getLeafForest f ++ getLeafForest ns
 
 --Constructs next level in the tree of polynomials.
 nextLevel :: IterCoeffs a -> BTree a -> BTree a
-nextLevel cfs (Node cb [])= Node cb (map (\cf -> Node (cf,False) []) cfs)
+nextLevel cfs (Node cb [])= Node cb (map (\cf -> Node (cf,True) []) cfs)
 nextLevel cfs (Node cb t) = Node cb (map (nextLevel cfs) t)
 
 nextLevelF :: IterCoeffs a -> BForest a -> BForest a
