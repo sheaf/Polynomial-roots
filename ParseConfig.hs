@@ -16,7 +16,7 @@ parse :: (Read a) => String -> Maybe a
 parse x
     | null y = Nothing
     | otherwise = Just $ fst (head y)
-        where y = reads(x)
+        where y = reads x
 
 -- TODO: parse gradient parameters
 parseToGradient str = case words str of

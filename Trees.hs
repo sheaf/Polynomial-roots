@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeFamilies #-}
-
 module Trees where
 
 import Types
@@ -18,7 +16,7 @@ type BForest a = Forest (a, CanHaveRoot)
 --Returns the polynomials in the tree with CanHaveRoot = True.
 getPolynomials :: BTree a -> [Polynomial a]
 getPolynomials (Node (c,False) t) = map (c:) (concatMap getPolynomials t)
-getPolynomials (Node (c,True) t)= [[c]] ++ map (c:) (concatMap getPolynomials t)
+getPolynomials (Node (c,True) t)= [c] : map (c:) (concatMap getPolynomials t)
 
 getAllLeafPolynomials :: BTree a -> [Polynomial a]
 getAllLeafPolynomials (Node (c,_) []) = [[c]]
@@ -27,17 +25,16 @@ getAllLeafPolynomials (Node (c,_) t)= map (c:) (concatMap getAllLeafPolynomials 
 --Returns a forest of polynomials with CanHaveRoot = True
 toPolyForest :: Polynomial a -> BForest a -> Forest (Polynomial a)
 toPolyForest _ [] = []
-toPolyForest p ((Node (c,b) f):ns) = let 
+toPolyForest p (Node (c,b) f:ns) = let 
     p' = p++[c]
     f' = toPolyForest p' f
-    ns'= toPolyForest p ns in case b of
-                                 True -> (Node p' f') : ns'
-                                 False-> f' ++ ns'
+    ns'= toPolyForest p ns in if b then Node p' f' : ns'
+                                   else f' ++ ns'
 
 getLeafForest :: Forest a -> Forest a
 getLeafForest [] = []
-getLeafForest ((Node c []):ns) = [Node c []] ++ getLeafForest ns 
-getLeafForest ((Node c f):ns) = getLeafForest f ++ getLeafForest ns
+getLeafForest (Node c []:ns) = Node c [] : getLeafForest ns 
+getLeafForest (Node c f:ns) = getLeafForest f ++ getLeafForest ns
 
 --Constructs next level in the tree of polynomials.
 nextLevel :: IterCoeffs a -> BTree a -> BTree a
@@ -54,22 +51,22 @@ pruneLeaves :: (Coefficient a) =>
           RealBound -> ComplexInterval -> Polynomial a 
           -> BForest a -> BForest a
 pruneLeaves _ _ _ [] = []
-pruneLeaves bound cI p ((Node (c,b) []):ns)
-    | 0 `elemI` values = (Node (c,True) []):ns'
-    | absD values `intersects` (0, bound $ length p) = (Node (c,False) []):ns'
+pruneLeaves bound cI p (Node (c,b) []:ns)
+    | 0 `elemI` values = Node (c,True) []:ns'
+    | absD values `intersects` (0, bound $ length p) = Node (c,False) []:ns'
         --note: length p is the degree of c:p
     | otherwise = ns'
         where dI = rectToDisk cI --disk arithmetic gives better results
               values = evaluateD (map toComplex $ p ++ [c]) dI
               --(evaluateD prunes more efficiently than evaluateI)
               ns' = pruneLeaves bound cI p ns
-pruneLeaves bound cI p ((Node (c,b) f):ns)
+pruneLeaves bound cI p (Node (c,b) f:ns)
     --bypass, in case pruning can't work
-    | 1 `elemI` (absI cI) = (Node (c,True) f) : ns'
+    | 1 `elemI` absI cI = Node (c,True) f : ns'
     --end of bypass
     | otherwise = case f' of
                        [] -> ns'
-                       otherwise -> (Node (c,b) f') : ns'
+                       otherwise -> Node (c,b) f' : ns'
         where ns' = pruneLeaves bound cI p ns
               f' = pruneLeaves bound cI (p++[c]) f
 
@@ -78,7 +75,7 @@ constructForest :: (Coefficient a) =>
                  Degree -> IterCoeffs a -> RealBound -> ComplexInterval
                  -> BForest a
 constructForest 0 _ _ _ = [Node (1,False) []]
-constructForest d cfs bd cI = (pruneLeaves bd cI []) . (nextLevelF cfs) $ constructForest (d-1) cfs bd cI
+constructForest d cfs bd cI = pruneLeaves bd cI [] . nextLevelF cfs $ constructForest (d-1) cfs bd cI
 
 constructPolyForest :: (Coefficient a) =>
                  Degree -> IterCoeffs a -> RealBound -> ComplexInterval
@@ -93,7 +90,7 @@ continueForest :: (Coefficient a) =>
                   -> Forest (Polynomial a) -> [(Polynomial a, BForest a)]
 continueForest 0 cfs bd cI f = filter (not.null.snd) $ map sPrune $ getLeafForest f
                                  where sPrune (Node p g) = (p', pruneLeaves bd cI p' [Node (c,True) []]) 
-                                        where c = (head . reverse) p
+                                        where c = last p
                                               p'= (reverse . drop 1 . reverse) p
 continueForest d cfs bd cI f = filter (not.null.snd) $
                                map sNextLevel $
