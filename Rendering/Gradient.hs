@@ -7,6 +7,7 @@ import Control.Arrow
 import Control.Applicative
 import Data.Colour.Names
 import Rendering.Colour
+import Types hiding(Gradient)
 import Util
 
 newtype Gradient clr a = Grad { runGrad :: Maybe Double -> clr a }
@@ -69,7 +70,30 @@ gradientByName "cold" = Just cold
 gradientByName "monochrome" = Just cold
 gradientByName _ = Nothing
 
+--------------------------------------------------------------------------------
+--Converting polynomials to values to be able to apply gradients.
 
+--Converts a polynomials with coefficients in [c1,c2,...] to a polynomial
+--with coefficients in [d1,d2,...].
+--Somewhat dodgy, as it depends on exact matching of coefficients...
+convertCoeffs :: (Coefficient a, Coefficient b) => [a] -> [b] -> Polynomial a -> Polynomial b 
+convertCoeffs _ _ [] = []
+convertCoeffs cfs dfs (c:cs) = case lookup c cfs' of
+                                    Nothing -> error "couldn't look up coeff; possible rounding error"
+                                    Just cf' -> cf':(convertCoeffs cfs dfs cs)
+    where cfs' = zipWith (\x y -> (y,x)) dfs cfs
 
+--Note: colouring depends on the order of the coefficients.
+--This is a "base d" expansion.
+toGValue1 :: (Coefficient a) => IterCoeffs a -> Polynomial a -> Double
+toGValue1 cfs p = z * evaluate p' z
+    where d = fromIntegral (length cfs) -1
+          p' = convertCoeffs cfs [1..d] p
+          z =  1 / fromIntegral (length cfs)
 
+--This one should be used with gradients such that g(0)=g(1).
+--This uses the scale factors.
+toGValue2 :: (Coefficient a) => IterCoeffs a -> Center -> Polynomial a -> Double
+toGValue2 cfs c p = 0.5 + 1/(2*pi) * phase scale
+    where scale = (negate . recip . (`evaluate` c)) $ derivative $ (map toComplex) $ p
 
