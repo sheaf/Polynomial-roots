@@ -32,12 +32,8 @@ instance Coefficient (Complex Double) where
 type Polynomial a = [a]
 type IterCoeffs a = [a]
 
---Trees of coefficients as representing polynomials.
-type CanHaveRoot = Bool
-data CoefficientTree a = Empty | Node a CanHaveRoot [CoefficientTree a]
-    deriving(Eq,Show)
-
 --Root finding types.
+type RealBound = Degree -> Double
 type Point = Complex Double
 type Guess = Complex Double
 type Root = Complex Double
