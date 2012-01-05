@@ -54,13 +54,12 @@ type Width = Double
 type Pixel = (Int,Int)
 type Gradient v c = (v -> c, String)
 data Mode = Roots | IFS | Both deriving (Eq, Ord, Read, Show)
-data Config v c a = Config { coefficients :: IterCoeffs a
-                           , resolution   :: Resolution
-                           , degree       :: Degree
-                           , center       :: Center
-                           , width        :: Width
-                           , gradient     :: Gradient v c
-                           }
+data Config a = Config { coefficients :: IterCoeffs a
+                       , resolution   :: Resolution
+                       , degree       :: Degree
+                       , center       :: Center
+                       , width        :: Width
+                       }
 
 --------------------------------------------------------------------------------
 --Basic functions.

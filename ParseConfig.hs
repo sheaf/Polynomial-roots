@@ -18,22 +18,11 @@ parse x
     | otherwise = Just $ fst (head y)
         where y = reads(x)
 
-parseToGradient :: (Integral v, RGB c) => String -> Maybe (Gradient (Sum v) c)
-parseToGradient "" = Nothing
-parseToGradient s
-    | s1 == ["warm"] = Just(warm h)
-    | s1 == ["cold"] = Just(cold h)
-    | s1 `elem` [["stripes"],["striped"],["stripe"]] = Just(stripes h)
-    | s1 `elem` [["grey"],["gray"]] = Just(grey h)
-    | s1 `elem` [["bw"], ["binary"], ["01"], ["10"]] = Just(binary h)
-    | otherwise = Nothing
-        where s' = words s
-              s1 = map (map toLower) $ take 1 s'
-              s2 = map parse ( take 1 $ drop 1 s' ) ::[Maybe Int]
-              h = case s2 of
-                     [Just h'] -> h'
-                     otherwise -> 12 --random value
-
+-- TODO: parse gradient parameters
+parseToGradient str = case words str of
+    (n:_) -> Just n
+    _     -> Nothing
+    
 parseToMode :: String -> Maybe Mode
 parseToMode s
     | null s = Nothing
@@ -43,12 +32,11 @@ parseToMode s
     | otherwise = Nothing
     where s1 = map (map toLower) (take 1 $ words s)
 
-parseMConfig :: (Integral v, RGB c, Coefficient a) => [String] 
-             -> Maybe (Mode, Config (Sum v) c a)
-parseMConfig (m:ic:res:d:c:w:g:[]) = (,) <$> mode <*> cfg
+parseMConfig :: (Coefficient a) => [String] -> Maybe (Mode, String, Config a)
+parseMConfig (m:ic:res:d:c:w:g:[]) = (,,) <$> mode <*> grad <*> cfg
     where mode = parseToMode m
           grad = parseToGradient g
-          cfg = Config <$> parse ic <*> parse res <*> parse d <*> parse c <*> parse w <*> grad
+          cfg = Config <$> parse ic <*> parse res <*> parse d <*> parse c <*> parse w
 parseMConfig _ = Nothing
 
 askParse :: String -> (String -> Maybe a) -> IO a
@@ -58,28 +46,30 @@ askParse prompt parse = do putStrLn prompt
   where parseFail = do putStrLn "Unable to parse, try again." 
                        askParse prompt parse
 
-askConfig :: (Integral v, RGB c, Coefficient a) => IO (Mode,Config (Sum v) c a)
-askConfig = (,) <$> askMode <*> askCfg
+askConfig :: (Coefficient a) => IO (Mode, String, Config a)
+askConfig = (,,) <$> askMode <*> askGrad <*> askCfg
 
 askMode :: IO Mode
 askMode = askParse "Enter desired mode. (roots/ifs/both)." parseToMode
 
-askCfg :: (Integral v, RGB c, Coefficient a) => IO (Config (Sum v) c a)
+askGrad :: IO String
+askGrad = askParse "Enter gradient name." parseToGradient
+
+askCfg :: (Coefficient a) => IO (Config a)
 askCfg = Config 
     <$> askParse "Enter desired coefficient set, e.g. [1,-1]." parse
     <*> askParse "Enter desired resolution, e.g. (400,400)." parse
     <*> askParse "Enter desired degree." parse
     <*> askParse "Enter desired center, e.g. 0:+(-0.707)." parse
     <*> askParse "Enter desired width." parse
-    <*> askParse "Enter desired gradient. (warm/cold/grey/binary)" parseToGradient
 
-showConfig :: (Integral v, Coefficient a) =>  Config (Sum v) c a -> IO()
-showConfig (Config ic (rx,ry) d c w grad)= do
+showConfig :: (Coefficient a) =>  Config a -> IO()
+showConfig (Config ic (rx,ry) d c w)= do
     putStrLn("Coefficient set is "++show(ic)++".")
     putStrLn("Resolution is "++show(rx)++"x"++show(ry)++".")
     putStrLn("Degree is "++show(d)++".")
     putStrLn("Center is "++show(c)++".")
     let h = (w* fromIntegral(ry) / (fromIntegral(rx)))::Double
     putStrLn("Width is "++show(w)++", height is "++show(h)++".")
-    putStrLn("Gradient is "++showGradient(grad)++".")
+
 

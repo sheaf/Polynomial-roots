@@ -18,6 +18,11 @@ Executable polynomial-roots
   Main-is:           Main.hs
   Build-depends:     base >= 4 && < 5,
                      SDL >= 0.6,
-                     SDL-image >= 0.6,
                      gd >= 3000,
-                     hmatrix >= 0.12
+                     hmatrix >= 0.12,
+                     array >= 0.3,
+                     colour >= 2.3,
+                     fclabels >= 1.0,
+                     mtl >= 2.0,
+                     transformers >= 0.2,
+                     directory >= 1.1

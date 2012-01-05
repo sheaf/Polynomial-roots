@@ -9,6 +9,8 @@ To do:
 3) Optimisation.
 4) Investigate better bounds. 
 5) Clean up gradients, and make some nicer ones (sunset purple-orange-yellow).-}
+{-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE RankNTypes #-}
 module Main where
 
 import Control.Applicative
@@ -17,54 +19,49 @@ import Data.Complex
 import System.Environment(getArgs)
 import System.IO
 import Data.Char
+import Data.Foldable (Foldable, toList)
 import Data.Maybe
-
 import Roots
 import IFS
 import Util
-import Types
+import Types hiding (Gradient(..))
 import Plotting
 import Interval
 import Image
 import ParseConfig
 import MainGUI
+import Pair
+import Settings
+import Rendering.Colour
+import Rendering.Gradient
 import Rendering.Raster
+import Rendering.ArrayRaster
+import Rendering.Coord
 
-ifsRoutine :: (Integral v, Num a, Coefficient a) 
-           => Config (Sum v) GDColor a -> IO()
-ifsRoutine cfg = do
-    rst <- createRasterizerIO ifsFunc cfg
+
+
+ifsRoutine :: (Real a, Coefficient a)  => Config a -> Gradient Colour Double -> IO ()
+ifsRoutine cfg g = do
     putStrLn ""
     putStrLn "IFS routine."
     putStrLn "Computing scale factors... (experimental)"
     putStrLn $ "Scale factors are: " ++ show (getScales cfg)
     putStrLn "Computing IFS..."
     putStrLn $ "I'm going to write to file '" ++ ifsfile ++ "'."
-    let pxs = rasterize rst <$> ifsPoints cfg
-    writeImageFile cfg ifsfile pxs
+    getPlot IFS "density" cfg (runWriteImage ifsfile g)
     putStrLn "Done writing to file 'ifs_image.png'. Finished IFS routine."
   where ifsfile = "ifs_image.png"
-        ifsFunc (IFSPlot p) = (complexToPair p, Sum 100)
 
-rootsRoutine :: (Integral v, Real a, Coefficient a) 
-             => Config (Sum v) GDColor a -> IO()
-rootsRoutine cfg = do
-    rst <- createRasterizerIO rootFunc cfg
+rootsRoutine :: (Real a, Coefficient a)  => Config a -> Gradient Colour Double -> IO ()
+rootsRoutine cfg g = do
     putStrLn ""
     putStrLn "Roots routine."
     putStrLn "Computing roots."
     putStrLn $ "I'm going to write to file '" ++ rootsfile ++ "'."
-    let pxs = rasterize rst <$> getRoots cfg
-    writeImageFile cfg rootsfile pxs
+    getPlot Roots "density" cfg (runWriteImage rootsfile g)
     putStrLn "Done writing to file 'roots_image.png'. Finished roots routine."
   where rootsfile = "roots_image.png"
-        rootFunc (RootPlot _ r) = (complexToPair r, Sum 25)
 
-writeImageFile :: (Monoid v) => Config v GDColor a -> FilePath 
-               -> [IO (Maybe (RstCoord, v))] -> IO ()
-writeImageFile cfg fn pts = writeImage fn pts res g
-  where res = resolution cfg
-        g = gradient cfg
 
 main :: IO()
 main = do
@@ -72,25 +69,75 @@ main = do
     putStrLn ""
     handleOptions
 
-runAsCmd :: (Integral v) => (Mode, Config (Sum v) GDColor Int) -> IO ()
-runAsCmd (mode, cfg) = do 
+runAsCmd :: (Mode, String, Config Int) -> IO ()
+runAsCmd (mode, gname, cfg) = do 
     putStrLn ""
     showConfig cfg
+    showGradient gname g
+    putStrLn ""
     case mode of
-        Roots -> rootsRoutine cfg
-        IFS -> ifsRoutine cfg
-        Both -> do rootsRoutine cfg
-                   ifsRoutine cfg
+        Roots -> rootsRoutine cfg g'
+        IFS -> ifsRoutine cfg g'
+        Both -> do rootsRoutine cfg g'
+                   ifsRoutine cfg g'
     putStrLn ""
     putStrLn "All done here! Press enter to quit."
     getLine
     putStrLn "Bye!"
+  where g = findGradient gname (fromIntegral $ Types.degree cfg)
+        g' = g ?? opacify black monochrome
 
-runAsGui :: (Integral v) => (Mode, Config (Sum v) RGB8 Int) -> IO ()
-runAsGui (mode, cfg) = do
+runAsGui :: (Mode, String, Config Int) -> IO ()
+runAsGui (mode, gname, cfg) = do
     showConfig cfg
+    showGradient gname g
     putStrLn "    Starting GUI..."
-    guiMain mode cfg
+    getPlot mode "density" cfg (runGuiMain (cfgToSettings cfg) g')
+  where g = findGradient gname (fromIntegral $ Types.degree cfg)
+        g' = g ?? opacify black monochrome
+
+showGradient gname Nothing = putStrLn $ concat ["Gradient ", gname, " not found."]
+showGradient gname (Just _) = putStrLn $ concat ["Gradient: ", gname]
+
+findGradient name d = opacify black . onInput (* (2 / d)) <$> gradientByName name
+
+runGuiMain s g xs r = do rst <- r
+                         runEnvT (guiMain xs rst g) s
+
+runWriteImage fn g xs r = do rst <- r
+                             writeImage xs rst g fn
+
+
+getPlot :: (Real a, Coefficient a) => Mode -> String -> Config a 
+        -> (forall f v i o. Foldable f => f i -> IO (IOArrayRaster v i (Maybe Double)) -> r)
+        -> r
+getPlot Roots "source" cfg k = k (getRoots cfg) $ 
+    mapOutput (fmap ((/ 2 ^ fromIntegral (Types.degree cfg)) . fromInteger) . getFirst) <$> 
+        mkRasterizer (mkRootPlot sourcePoly) (rbCfg cfg) (ibCfg cfg)
+getPlot Roots "density" cfg k = k (getRoots cfg) $ 
+    mapOutput (Just . log . (+ 1) . getSum) <$>
+        mkRasterizer (mkRootPlot $ density 1) (rbCfg cfg) (ibCfg cfg)
+getPlot IFS "density" cfg k = k (ifsPoints cfg) $ 
+    mapOutput (Just . log . (+ 1) . getSum) <$> 
+        mkRasterizer (mkIFSPlot $ density 1) (rbCfg cfg) (ibCfg cfg)
+getPlot _ _ _ _ = error "TODO -- handle getPlot cases"
+
+rbCfg (Config _ (rx,ry) _ _ _) = (mkCd2 0 0, mkCd2 rx ry)
+ibCfg (Config _ _ _ c w) = (pair mkCd2 (c - wC), pair mkCd2 (c + wC))
+  where wC = (w/2) :+ (w/2)
+
+density :: v -> a -> b -> Sum v
+density n _ _ = Sum n
+
+sourcePoly :: (Coefficient cf, Ord cf) => Polynomial cf -> a -> First Integer
+sourcePoly p _ = First . Just . round . toAbs
+               $ foldr (\x n -> x + 2 * n) 0 (min 1 . max 0 <$> reverse p)
+
+mkRootPlot :: (Polynomial cf -> Root -> v) -> RootPlot cf -> (InpCoord, v)
+mkRootPlot f (RootPlot p r) = (pair mkCd2 r, f p r)
+
+mkIFSPlot :: (Polynomial cf -> Root -> v) -> IFSPlot cf -> (InpCoord, v)
+mkIFSPlot f (IFSPlot c) = (pair mkCd2 c, f [] c)
 
 askYN :: String -> IO(Bool)
 askYN s = do
@@ -103,13 +150,11 @@ askYN s = do
         _ -> do putStrLn "Sorry? "
                 askYN s
 
-
 --this should be changed to only accept exception: file doesn't exist...
 alwaysError :: IOException -> IO(Maybe a)
 alwaysError = \_ -> return Nothing
 
-parseConfigFile :: (Integral v, RGB c, Coefficient a) 
-                => IO (Maybe (Mode, Config (Sum v) c a))
+parseConfigFile :: (Coefficient a) => IO (Maybe (Mode, String, Config a))
 parseConfigFile = do
     file' <- handle (alwaysError) ((fmap Just) $ (openFile "roots.ini" ReadMode))
     case file' of
@@ -124,7 +169,7 @@ handleOptions = do
         ("gui":args') -> parseGuiArgs $ parseMConfig args'
         _             -> parseCmdArgs $ parseMConfig args
 
-parseGuiArgs :: (Integral v) => Maybe (Mode, Config (Sum v) RGB8 Int) -> IO ()
+parseGuiArgs :: Maybe (Mode, String, Config Int) -> IO ()
 parseGuiArgs (Just cfg) = putStrLn "Using command line args." >> runAsGui cfg
 parseGuiArgs Nothing    = do 
     cfg' <- parseConfigFile
@@ -132,7 +177,7 @@ parseGuiArgs Nothing    = do
         Nothing  -> putStrLn "No valid config file found. (roots.ini)"
         Just cfg -> runAsGui cfg
 
-parseCmdArgs :: (Integral v) => Maybe (Mode, Config (Sum v) GDColor Int) -> IO ()
+parseCmdArgs :: Maybe (Mode, String, Config Int) -> IO ()
 parseCmdArgs (Just cfg) = putStrLn "Using command line args." >> runAsCmd cfg
 parseCmdArgs Nothing    = do 
     cfg' <- parseConfigFile
