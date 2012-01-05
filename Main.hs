@@ -9,11 +9,10 @@ To do:
 3) Optimisation.
 4) Investigate better bounds. 
 5) Clean up gradients, and make some nicer ones (sunset purple-orange-yellow).-}
+
 module Main where
 
-import Control.Applicative
-import Control.Exception(SomeException,IOException,handle)
-import Data.Complex
+import Control.Exception(IOException,handle)
 import System.Environment(getArgs)
 import System.IO
 import Data.Char
@@ -22,7 +21,6 @@ import Roots
 import IFS
 import Types
 import Plotting
-import Interval
 import Image
 import ParseConfig
 import MainGUI

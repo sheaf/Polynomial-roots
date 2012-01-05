@@ -7,12 +7,10 @@ import Graphics.UI.SDL.Events (Event(..))
 
 import Types
 import Util
-import Interval
 import Roots
 import IFS
 import Plotting
 import Image
-import ParseConfig
 import GUI.Pixels
 
 type Time = Word32
