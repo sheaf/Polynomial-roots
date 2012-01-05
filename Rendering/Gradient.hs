@@ -67,7 +67,7 @@ monochrome = fadeIn white
 
 gradientByName "warm" = Just warm
 gradientByName "cold" = Just cold
-gradientByName "monochrome" = Just cold
+gradientByName "monochrome" = Just monochrome
 gradientByName _ = Nothing
 
 --------------------------------------------------------------------------------
