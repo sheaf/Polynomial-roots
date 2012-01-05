@@ -5,8 +5,11 @@ import Control.Monad
 import Foreign
 
 import Graphics.UI.SDL
---import Graphics.UI.SDL.Image
 import Plotting
+import Rendering.Colour
+
+type RGB8 = (Word8, Word8, Word8)
+
 
 withLock :: (Surface -> IO a) -> Surface -> IO a
 withLock f surf = lockSurface surf *> f surf <* unlockSurface surf

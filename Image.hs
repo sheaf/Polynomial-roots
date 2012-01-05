@@ -1,28 +1,52 @@
+{-# LANGUAGE TypeFamilies #-}
 module Image where
 
+import Control.Monad.IO.Class
+import Data.Foldable
 import qualified Graphics.GD.ByteString.Lazy as GD
-import Types
+import Util
+import Pair
+import Settings
+import Rendering.Colour
+import Rendering.Raster
+import Rendering.ArrayRaster
+import Rendering.Coord
+import Rendering.Gradient
 
 --------------------------------------------------------------------------------
 --Image writing.
 
-writePixel:: GD.Image -> Pixel -> Gradient GD.Color -> IO()
-writePixel image (px,py) (grad,_) = do
-    col <- GD.getPixel (px,py) image
-    let col' = grad col
-    GD.setPixel (px,py) col' image
+writePixel :: GD.Image -> Gradient Colour Double -> RstCoord -> Maybe Double -> IO()
+writePixel img g xy c = GD.setPixel (toTuple xy) clr img
+  where clr = fromColour $ runGrad g c
 
-writePixels :: GD.Image -> [Pixel] -> Gradient GD.Color -> IO()
-writePixels image p g
-    | null p = return()
-    | otherwise = do writePixel image (head p) g
-                     writePixels image (tail p) g
+writePixels :: (Rasterizer r, RstContext r ~ IO) 
+            => r v i (Maybe Double) -> GD.Image 
+            -> [i] -> Gradient Colour Double -> IO()
+writePixels rst img [] g = return ()
+writePixels rst img (p:ps) g = do px <- rasterize rst p
+                                  whenJust (uncurry $ writePixel img g) px
+                                  writePixels rst img ps g
 
-writeImage :: FilePath -> [Pixel] -> Resolution -> Gradient GD.Color -> IO()
-writeImage file pixels (rx,ry) (grad,s) = do
-    let pixels' = map (\(px,py) -> (px,py)) pixels 
-    image <- GD.newImage (rx,ry)
-    let col = 0 --change for other gradients!!
-    GD.fillImage col image
-    writePixels image pixels' (grad,s)
+
+writeImage :: (Foldable f, Rasterizer r, RstContext r ~ IO) 
+           => f i -> r v i (Maybe Double)
+           -> Gradient Colour Double -> FilePath -> IO ()
+writeImage xs rst g file = do
+    let (rx,ry) = toTuple $ outputSize rst
+    image <- GD.newImage (rx, ry)
+    GD.fillImage (fromColour $ runGrad g Nothing) image
+    writePixels rst image (toList xs) g
     GD.savePngFile file image
+
+
+fromRGB8 (r,g,b) = GD.rgb (fromIntegral r) (fromIntegral g) (fromIntegral b)
+fromColour = fromRGB8 . toRGB8
+
+dumpImage :: (Rasterizer r, RstContext r ~ IO) 
+          => r v i (Maybe Double) -> Gradient Colour Double -> FilePath -> IO ()
+dumpImage rst g file = do image <- GD.newImage (rx, ry)
+                          GD.fillImage (fromColour $ runGrad g Nothing) image
+                          withOutput_ rst (writePixel image g)
+                          GD.savePngFile file image
+  where (rx,ry) = toTuple $ outputSize rst

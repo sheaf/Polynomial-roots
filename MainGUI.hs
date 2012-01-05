@@ -1,106 +1,136 @@
+{-# LANGUAGE TypeFamilies #-}
 module MainGUI where
 
 import Control.Exception (bracket_)
+import Control.Monad.IO.Class
 import GHC.Word
+import System.Directory
 import qualified Graphics.UI.SDL as SDL
+import Graphics.UI.SDL.Keysym
 import Graphics.UI.SDL.Events (Event(..))
+import Data.Foldable (Foldable(), toList)
+import Data.Colour
 
-import Types
+import Types hiding (Config(..), Gradient)
+import Settings hiding (size)
+import qualified Settings as S
 import Util
-import Roots
-import IFS
-import Plotting
 import Image
+import Pair
 import GUI.Pixels
+import Rendering.Raster
+import Rendering.ArrayRaster
+import Rendering.Gradient
+import Rendering.Colour
+import Rendering.Coord
 
 type Time = Word32
 
-guiMain :: (Real a, Coefficient a) => Mode -> Config RGB8 a -> IO ()
-guiMain mode cfg = bracketSDL mode cfg $ runMainLoop mode cfg
+guiMain :: (Foldable f, Rasterizer r, RstContext r ~ IO) 
+        => f i -> r v i (Maybe Double)
+        -> Gradient Colour Double -> EnvIO ()
+guiMain xs rst g = bracketSDL (outputSize rst) $ runMainLoop xs rst g
 
-bracketSDL :: Mode -> Config c a -> IO b -> IO b
-bracketSDL mode cfg = bracket_ (initSDL mode cfg) endSDL 
+bracketEnvIO :: EnvIO a -> EnvIO b -> EnvIO c -> EnvIO c
+bracketEnvIO a z x = do env <- ask
+                        liftIO $ bracket_ (runEnvT a env) (runEnvT z env) (runEnvT x env)
 
-initSDL :: Mode -> Config c a -> IO ()
-initSDL mode cfg = do SDL.init [SDL.InitEverything]
-                      SDL.setVideoMode w h 32 []
-                      return ()
-  where (w, h) = getDisplaySize mode cfg
+bracketSDL :: RstSize -> EnvIO b -> EnvIO b
+bracketSDL sz = bracketEnvIO (initSDL sz) endSDL
 
-getDisplaySize :: Mode -> Config c a -> (Int, Int)
-getDisplaySize Both (Config _ (rx,ry) _ _ _ _) = (rx*2, ry)
-getDisplaySize _    (Config _ (rx,ry) _ _ _ _) = (rx, ry)
+initSDL :: RstSize -> EnvIO ()
+initSDL sz = do liftIO $ SDL.init [SDL.InitEverything]
+                let (w, h) = getDisplaySize sz
+                liftIO $ SDL.setVideoMode w h 32 []
+                return ()
 
-endSDL :: IO ()
-endSDL = SDL.quit
+getDisplaySize :: RstSize -> (Int, Int)
+getDisplaySize = toTuple
 
-runMainLoop :: (Real a, Coefficient a ) => Mode -> Config RGB8 a -> IO ()
-runMainLoop mode cfg = do mainLoop mode cfg (getPixels mode cfg)
+endSDL :: EnvIO ()
+endSDL = liftIO SDL.quit
 
-getPixels :: (Real a, Coefficient a ) => Mode -> Config c a -> [PlotData]
-getPixels Roots cfg = plotPixels cfg (getRoots cfg)
-getPixels IFS cfg = plotPixels cfg (ifsPoints cfg)
-getPixels Both cfg = interleave rootsPxs (offset <$> ifsPxs)
-  where (rx, _) = resolution cfg
-        rootsPxs = plotPixels cfg (getRoots cfg)
-        ifsPxs = plotPixels cfg (ifsPoints cfg)
-        interleave (x:xs) (y:ys) = x:y:interleave xs ys
-        interleave [] ys = ys
-        interleave xs [] = xs
-        offset ((x, y), o) = ((x + rx, y), o)
+runMainLoop :: (Foldable f, Rasterizer r, RstContext r ~ IO) 
+            => f i -> r v i (Maybe Double)
+            -> Gradient Colour Double -> EnvIO ()
+runMainLoop xs rst g = mainLoop (toList xs) rst g
 
-drawPixel :: Gradient RGB8 -> SDL.Surface -> (Pixel, PixelOrig) -> IO ()
-drawPixel g surf (xy,o) = mapPixel xy (fst g) surf
+drawPixel :: (Rasterizer r, RstContext r ~ IO) 
+            => r v i (Maybe Double) -> Gradient Colour Double 
+            -> SDL.Surface -> i -> IO ()
+drawPixel rst g surf p = do r <- rasterize rst p
+                            renderPixel g surf `whenJust` r
 
-mainLoop :: Mode -> Config RGB8 a -> [PlotData] -> IO ()
-mainLoop mode cfg xs = do xs' <- withMinDelay 5 (timedDraw (gradient cfg) 5 xs)
-                          handleEvents mode cfg xs' =<< newEvents
+renderPixel :: Gradient Colour Double -> SDL.Surface 
+            -> (Cd2 Int, Maybe Double) -> IO ()
+renderPixel g surf (xy, v) = do let c = runGrad g v
+                                setPixel (toTuple xy) (toRGB8 c) surf
 
-handleEvents :: Mode -> Config RGB8 a -> [PlotData] -> [Event] -> IO ()
-handleEvents mode cfg xs evs | done      = return ()
-                             | otherwise = do mapM_ (handleClicks mode cfg) clicks
-                                              mainLoop mode cfg xs
+mainLoop :: (Rasterizer r, RstContext r ~ IO) 
+         => [i] -> r v i (Maybe Double)
+         -> Gradient Colour Double -> EnvIO ()
+mainLoop xs rst g = do xs' <- withMinDelay 5 (timedDraw g rst 5 xs)
+                       handleEvents xs' rst g =<< liftIO newEvents
+
+handleEvents :: (Rasterizer r, RstContext r ~ IO) 
+             => [i] -> r v i (Maybe Double) -> Gradient Colour Double 
+             -> [Event] -> EnvIO ()
+handleEvents xs rst g evs | done      = return ()
+                          | otherwise = do mapM_ handleClicks clicks
+                                           mapM_ (handleKeys rst g) keys
+                                           mainLoop xs rst g
   where done = any (== Quit) evs
         clicks = mapMaybe getClick evs
+        keys = mapMaybe getKeys evs
 
 getClick (MouseButtonDown x y SDL.ButtonLeft) = Just (x, y)
 getClick _ = Nothing
 
-handleClicks :: Mode -> Config RGB8 a -> (Word16, Word16) -> IO ()
-handleClicks mode (Config ic (rx,ry) d c w g) (x, y) = print xy
+handleClicks :: (Word16, Word16) -> EnvIO ()
+handleClicks (x, y) = do sz <- asks S.size
+                         res <- getEnv resolution
+                         c <- getEnv center
+                         liftIO $ print (getC res sz + c)
   where [x', y'] = fromIntegral <$> [x, y]
-        [rx', ry'] = fromIntegral <$> [rx, ry]
-        y'' = ry' - y'
-        h = w * ry'/rx'
-        xy' = case (x' <= rx') of
-                   True ->  ((x' / rx' - 0.5) * w) :+ ((y'' / ry' - 0.5) * h)
-                   False ->  (((x'-rx') / rx' - 0.5) * w) :+ ((y'' / ry' - 0.5) * h)
-        xy = case (mode, x' <= rx') of
-                  (Roots,_) ->  xy' + c
-                  (IFS,_) -> xy'
-                  (Both, True) -> xy' + c
-                  (Both, False) -> xy'          
+        getC (rx, ry) (w, h) = ((x' / fromIntegral rx - 0.5) * w) 
+                            :+ ((y' / fromIntegral ry - 0.5) * h)
 
-withMinDelay :: Time -> IO a -> IO a
-withMinDelay dt x = do t1 <- SDL.getTicks
+getKeys (KeyDown ks) = Just ks
+getKeys _ = Nothing
+
+handleKeys rst g (Keysym SDLK_s _ _) = liftIO $ dumpGUIImage rst g
+handleKeys _ _ _ = return ()
+
+dumpGUIImage rst g = do fn <- nextImageName $ mkImageName <$> [1..]
+                        putStrLn $ "Saving to image: " ++ fn
+                        dumpImage rst g fn
+                        putStrLn $ "Image saved."
+  where mkImageName n = "gui_dump_" ++ show n ++ ".png"
+        nextImageName (n:ns) = do exists <- doesFileExist n
+                                  if exists then nextImageName ns else return n
+
+withMinDelay :: Time -> EnvIO a -> EnvIO a
+withMinDelay dt x = do t1 <- liftIO SDL.getTicks
                        r <- x
-                       delayUntil $ t1 + dt
+                       liftIO $ delayUntil $ t1 + dt
                        return r
 
 delayUntil t = do cur <- SDL.getTicks
                   when (cur < t) (SDL.delay $ t - cur)
 
 
-timedDraw :: Gradient RGB8 -> Time -> [PlotData] -> IO [PlotData]
-timedDraw _ _ [] = return []
-timedDraw g dt xs = do cur <- SDL.getTicks
-                       s <- SDL.getVideoSurface
-                       xs' <- withLock (untilTime (drawPixel g) (cur + dt) xs) s
-                       SDL.flip s
-                       when (null xs') (putStrLn "Plotting complete.")
-                       return xs'
-                    
+timedDraw :: (Rasterizer r, RstContext r ~ IO) 
+          => Gradient Colour Double -> r v i (Maybe Double)
+          -> Time -> [i] -> EnvIO [i]
+timedDraw _ _ _ [] = return []
+timedDraw g rst dt xs = do cur <- liftIO SDL.getTicks
+                           s <- liftIO SDL.getVideoSurface
+                           xs' <- liftIO $ withLock (untilTime (drawPixel rst g) (cur + dt) xs) s
+                           liftIO $ SDL.flip s
+                           when (null xs') (liftIO $ putStrLn "Plotting complete.")
+                           return xs'
 
+untilTime :: (a -> b -> IO ()) -> Time -> [b] -> a -> IO [b]
 untilTime _ _ [] _ = return []
 untilTime f t (x:xs) y = do f y x
                             cur <- SDL.getTicks
