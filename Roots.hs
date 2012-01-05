@@ -2,6 +2,7 @@ module Roots where
 
 import Types
 import Trees
+import Data.Tree(flatten)
 import Interval
 import Plotting
 import Numeric.GSL.Polynomials(polySolve)
@@ -26,7 +27,8 @@ canYieldRoots cfs d cI = concatMap getAllLeafPolynomials $ constructForest d cfs
 
 canHaveRoots :: (Coefficient a) =>
         IterCoeffs a -> Degree -> ComplexInterval -> [Polynomial a]
-canHaveRoots cfs d cI = concatMap getPolynomials $ constructForest d cfs (bound cfs cI) cI
+--canHaveRoots cfs d cI = concatMap getPolynomials $ constructForest d cfs (bound cfs cI) cI
+canHaveRoots cfs d cI = concatMap flatten $ constructPolyForest d cfs (bound cfs cI) cI
 
 --------------------------------------------------------------------------------
 --Root finding: GSL library.
