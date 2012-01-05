@@ -97,3 +97,8 @@ continueForest d cfs bd cI f = filter (not.null.snd) $
                                continueForest (d-1) cfs bd cI f 
                                  where sNextLevel (p,f2) = (p, pruneLeaves bd cI p f2')
                                         where f2' = nextLevelF cfs f2
+
+continuePolyForest :: (Coefficient a) =>
+                      Degree -> IterCoeffs a -> RealBound -> ComplexInterval
+                      -> Forest (Polynomial a) -> Forest (Polynomial a)
+continuePolyForest d cfs bd cI f = concatMap (uncurry toPolyForest) $ continueForest d cfs bd cI f
