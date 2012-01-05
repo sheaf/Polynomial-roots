@@ -14,7 +14,7 @@ toifs coeffs c = (toifs' coeffs c, [c])
         --two normalisations, z -> (cf z c + 1) and z -> (zc + cf)
 
 scaleFactors :: (Coefficient a) => Config a -> [Complex Double]
-scaleFactors (Config ic (rx,_) d c eps) = 
+scaleFactors (Config ic _ d c eps) = 
                 filterClose 0.1 allscalings
                          -- ^^ random constant, tweaking necessary
     where allscalings = (map $ (negate . recip . (`evaluate` c)) . derivative . map toComplex) (canHaveRoots ic d cI)
@@ -22,23 +22,23 @@ scaleFactors (Config ic (rx,_) d c eps) =
 
 ifsCheatCounts :: (Coefficient a) => [Complex Double] -> [Polynomial a] 
                -> Config a -> [IFSPlot a]
-ifsCheatCounts scales pols (Config _ res d c w) = map IFSPlot points
+ifsCheatCounts scales pols (Config _ _ _ c _) = map IFSPlot points
     where points' = map ((`evaluate` c) . map toComplex) pols
           points = case scales of
                         [] -> points'
-                        otherwise -> (\x -> map (x*) scales) =<< points'
+                        _ -> (\x -> map (x*) scales) =<< points'
 
 ifsIterates :: Iterations -> IFS -> [Complex Double]
-ifsIterates 0 (fs,vals) = vals
+ifsIterates 0 (_,vals) = vals
 ifsIterates n (fs,vals) = fs =<< ifsIterates (n-1) (fs,vals)
 
 ifsCounts :: (Coefficient a) => [Complex Double] -> IFS 
           -> Config a -> [Complex Double]
-ifsCounts scales ifs (Config ic res d c w) = points
+ifsCounts scales ifs (Config _ res d _ _) = points
     where points' = ifsIterates d ifs
           points = case scales of
                         [] -> points'
-                        otherwise -> (\x -> map (x*) scales) =<< points'
+                        _ -> (\x -> map (x*) scales) =<< points'
 
 getScales :: (Coefficient a) => Config a -> [Complex Double]
 getScales (Config ic (rx,ry) d c w) = scales

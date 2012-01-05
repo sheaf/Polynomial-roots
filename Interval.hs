@@ -48,11 +48,11 @@ instance Num RealInterval where
     abs (x1,y1) = (mini',maxi')
         where mini' = abs $ minimum [maximum [x1,0],y1]
               maxi' = maximum [abs x1,abs y1]
-    signum (x1,y1)= error "No signum definition for RealInterval"
+    signum _ = error "No signum definition for RealInterval"
     fromInteger n = (fromInteger n::Double,fromInteger n::Double)
 
 instance Fractional RealInterval where
-    (x1,y1) / (x2,y2) = (x1,y1) * (recip y1,recip x1)
+    (x1,y1) / (x2,y2) = (x1,y1) * (recip y2,recip x2)
     fromRational q = (fromRational q ::Double, fromRational q::Double)
 
 instance Interval RealInterval where
@@ -117,7 +117,7 @@ instance Num ComplexInterval where
     fromInteger n =(fromInteger n::Complex Double,fromInteger n::Complex Double)
 
 instance Fractional ComplexInterval where
-    a / b = error "Division of ComplexInterval by ComplexInterval not defined"
+    (/) = error "Division of ComplexInterval by ComplexInterval not defined"
     fromRational q = (fromRational q::Complex Double,
                       fromRational q::Complex Double)
 
@@ -164,9 +164,9 @@ instance Interval Disk where
     fromScalar z = (z,0)
     
 absD :: Disk -> RealInterval
-absD (c,r) = (min,max)
-    where min = maximum[0, magnitude(c)-r]
-          max = magnitude(c) + r
+absD (c,r) = (mini,maxi)
+    where mini = maximum[0, magnitude(c)-r]
+          maxi = magnitude(c) + r
 
 --------------------------------------------------------------------------------
 
@@ -181,7 +181,7 @@ taylor p c = zipWith (/) derivs facts
 evaluateI :: (Coefficient a, Interval b, a ~ Scalar b)
              => Polynomial a -> b -> b
 evaluateI (a:as) z = a +! (z * evaluateI as z)
-evaluateI [] z = 0
+evaluateI [] _ = fromScalar 0
 
 --Evaluation of polynomials on disks, always producing less spurious results.
 --That is, evaluateD p d is always a subset of evaluateI p d

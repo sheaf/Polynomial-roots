@@ -13,9 +13,7 @@ To do:
 {-# LANGUAGE RankNTypes #-}
 module Main where
 
-import Control.Applicative
-import Control.Exception(SomeException,IOException,handle)
-import Data.Complex
+import Control.Exception(IOException,handle)
 import System.Environment(getArgs)
 import System.IO
 import Data.Char
@@ -26,7 +24,6 @@ import IFS
 import Util
 import Types hiding (Gradient(..))
 import Plotting
-import Interval
 import Image
 import ParseConfig
 import MainGUI

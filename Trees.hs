@@ -2,7 +2,6 @@ module Trees where
 
 import Types
 import Interval
-import Control.Applicative
 import Data.Tree
 import qualified Data.Foldable as F
 
@@ -34,7 +33,7 @@ toPolyForest p (Node (c,b) f:ns) = let
 getLeafForest :: Forest a -> Forest a
 getLeafForest [] = []
 getLeafForest (Node c []:ns) = Node c [] : getLeafForest ns 
-getLeafForest (Node c f:ns) = getLeafForest f ++ getLeafForest ns
+getLeafForest (Node _ f:ns) = getLeafForest f ++ getLeafForest ns
 
 --Constructs next level in the tree of polynomials.
 nextLevel :: IterCoeffs a -> BTree a -> BTree a
@@ -51,7 +50,7 @@ pruneLeaves :: (Coefficient a) =>
           RealBound -> ComplexInterval -> Polynomial a 
           -> BForest a -> BForest a
 pruneLeaves _ _ _ [] = []
-pruneLeaves bound cI p (Node (c,b) []:ns)
+pruneLeaves bound cI p (Node (c,_) []:ns)
     | 0 `elemI` values = Node (c,True) []:ns'
     | absD values `intersects` (0, bound $ length p) = Node (c,False) []:ns'
         --note: length p is the degree of c:p
@@ -66,7 +65,7 @@ pruneLeaves bound cI p (Node (c,b) f:ns)
     --end of bypass
     | otherwise = case f' of
                        [] -> ns'
-                       otherwise -> Node (c,b) f' : ns'
+                       _ -> Node (c,b) f' : ns'
         where ns' = pruneLeaves bound cI p ns
               f' = pruneLeaves bound cI (p++[c]) f
 
@@ -88,8 +87,8 @@ constructPolyForest d cfs bd cI = toPolyForest [] $ constructForest d cfs bd cI
 continueForest :: (Coefficient a) =>
                   Degree -> IterCoeffs a -> RealBound -> ComplexInterval
                   -> Forest (Polynomial a) -> [(Polynomial a, BForest a)]
-continueForest 0 cfs bd cI f = filter (not.null.snd) $ map sPrune $ getLeafForest f
-                                 where sPrune (Node p g) = (p', pruneLeaves bd cI p' [Node (c,True) []]) 
+continueForest 0 _ bd cI f = filter (not.null.snd) $ map sPrune $ getLeafForest f
+                                 where sPrune (Node p _) = (p', pruneLeaves bd cI p' [Node (c,True) []]) 
                                         where c = last p
                                               p'= (reverse . drop 1 . reverse) p
 continueForest d cfs bd cI f = filter (not.null.snd) $

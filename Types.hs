@@ -62,16 +62,16 @@ data Config a = Config { coefficients :: IterCoeffs a
 
 evaluate :: (Coefficient a, b ~ a) => Polynomial a -> b -> b
 evaluate (a:as) z = a + z * evaluate as z
-evaluate [] z = 0
+evaluate [] _ = 0
 
 derivative :: Coefficient a => Polynomial a -> Polynomial a
 derivative = zipWith (*) (map fromIntegral [1..]) . drop 1
 
 --A bit dodgy, but useful.
 filterClose :: Coefficient a => ErrorBound -> [a] -> [a]
-filterClose eps [] = []
+filterClose _ [] = []
 filterClose eps (c:cs) = filterClose' eps cs [c]
-    where filterClose' eps' [] bs = bs
+    where filterClose' _ [] bs = bs
           filterClose' eps' (a:as) bs
               | good = filterClose' eps' as (bs++[a])
               | otherwise = filterClose' eps' as bs
