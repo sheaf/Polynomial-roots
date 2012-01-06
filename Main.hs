@@ -19,6 +19,7 @@ import System.IO
 import Data.Char
 import Data.Foldable (Foldable, toList)
 import Data.Maybe
+import Data.Monoid
 import Roots
 import IFS
 import Util
@@ -29,13 +30,16 @@ import ParseConfig
 import MainGUI
 import Pair
 import Settings
+import Configuration hiding (Roots, IFS)
+import Configuration.Parsing
 import Rendering.Colour
 import Rendering.Gradient
 import Rendering.Raster
 import Rendering.ArrayRaster
 import Rendering.Coord
-
-
+import qualified Configuration as C
+import qualified Types as T
+import Prelude hiding (fst, snd)
 
 ifsRoutine :: (Real a, Coefficient a)  => Config a -> Gradient Colour Double -> IO ()
 ifsRoutine cfg g = do
@@ -66,32 +70,32 @@ main = do
     putStrLn ""
     handleOptions
 
-runAsCmd :: (Mode, String, Config Int) -> IO ()
-runAsCmd (mode, gname, cfg) = do 
+runAsCmd :: (Mode, Gradient Colour Double, Config Int) -> IO ()
+runAsCmd (mode, g, cfg) = do 
     putStrLn ""
     showConfig cfg
-    showGradient gname g
+--     showGradient gname g
     putStrLn ""
     case mode of
-        Roots -> rootsRoutine cfg g'
-        IFS -> ifsRoutine cfg g'
-        Both -> do rootsRoutine cfg g'
-                   ifsRoutine cfg g'
+        Roots -> rootsRoutine cfg g
+        IFS -> ifsRoutine cfg g
+        Both -> do rootsRoutine cfg g
+                   ifsRoutine cfg g
     putStrLn ""
     putStrLn "All done here! Press enter to quit."
     getLine
     putStrLn "Bye!"
-  where g = findGradient gname (fromIntegral $ Types.degree cfg)
-        g' = g ?? opacify black monochrome
+--   where g = findGradient gname (fromIntegral $ Types.degree cfg)
+--         g' = g ?? opacify black monochrome
 
-runAsGui :: (Mode, String, Config Int) -> IO ()
-runAsGui (mode, gname, cfg) = do
+runAsGui :: (Mode, Gradient Colour Double, Config Int) -> IO ()
+runAsGui (mode, g, cfg) = do
     showConfig cfg
-    showGradient gname g
+--     showGradient gname g
     putStrLn "    Starting GUI..."
-    getPlot mode "density" cfg (runGuiMain (cfgToSettings cfg) g')
-  where g = findGradient gname (fromIntegral $ Types.degree cfg)
-        g' = g ?? opacify black monochrome
+    getPlot mode "source" cfg (runGuiMain (cfgToSettings cfg) g)
+--   where g = findGradient gname (fromIntegral $ Types.degree cfg)
+--         g' = g ?? opacify black monochrome
 
 showGradient gname Nothing = putStrLn $ concat ["Gradient ", gname, " not found."]
 showGradient gname (Just _) = putStrLn $ concat ["Gradient: ", gname]
@@ -151,46 +155,77 @@ askYN s = do
 alwaysError :: IOException -> IO(Maybe a)
 alwaysError _ = return Nothing
 
-parseConfigFile :: (Coefficient a) => IO (Maybe (Mode, String, Config a))
-parseConfigFile = do
-    file' <- handle alwaysError (fmap Just $ openFile "roots.ini" ReadMode)
-    case file' of
-        Nothing -> return Nothing
-        Just file -> do strings <- fmap lines $ hGetContents file
-                        return $ parseMConfig (take 7 strings)
+-- parseConfigFile :: (Coefficient a) => IO (Maybe (Mode, String, Config a))
+-- parseConfigFile = do
+--     file' <- handle alwaysError (fmap Just $ openFile "roots.ini" ReadMode)
+--     case file' of
+--         Nothing -> return Nothing
+--         Just file -> do strings <- fmap lines $ hGetContents file
+--                         return $ parseMConfig (take 7 strings)
 
 handleOptions :: IO ()
 handleOptions = do
     args <- getArgs
-    case args of
-        ("gui":args') -> parseGuiArgs $ parseMConfig args'
-        _             -> parseCmdArgs $ parseMConfig args
+    getConfig args
+    
+--     case args of
+--         ("gui":args') -> parseGuiArgs =<< loadConfigFile args'
+--         _             -> parseCmdArgs =<< loadConfigFile args
+--         _             -> parseCmdArgs =<< parseMConfig args
 
-parseGuiArgs :: Maybe (Mode, String, Config Int) -> IO ()
-parseGuiArgs (Just cfg) = putStrLn "Using command line args." >> runAsGui cfg
-parseGuiArgs Nothing    = do 
-    cfg' <- parseConfigFile
-    case cfg' of
-        Nothing  -> putStrLn "No valid config file found. (roots.ini)"
-        Just cfg -> runAsGui cfg
+getConfig [] = loadConfigFile "roots.config"
+getConfig (arg:_) = loadConfigFile arg
 
-parseCmdArgs :: Maybe (Mode, String, Config Int) -> IO ()
-parseCmdArgs (Just cfg) = putStrLn "Using command line args." >> runAsCmd cfg
-parseCmdArgs Nothing    = do 
-    cfg' <- parseConfigFile
-    case cfg' of
-        Nothing -> do 
-            putStrLn "No valid config file found. (roots.ini)"
-            runAsCmd =<< askConfig
-        Just cfg -> do
-            ans <- askYN "Valid config file found. Use config file? (y/n) "
-            if ans then runAsCmd cfg else askAboutEverything
+-- loadConfigFile :: String -> IO (Maybe (Mode, Gradient Colour Double, Config Int))
+loadConfigFile fn = do res <- parseConfig fn =<< readFile fn
+                       case res of 
+                           Left err -> do putStrLn "Error loading config file:"
+                                          putStrLn err
+--                                           return Nothing
+                           Right cfg -> mkConfig cfg
 
 
-askAboutEverything = do useGUI <- askYN "Run as GUI? (y/n)"
-                        if useGUI 
-                            then runAsGui =<< askConfig 
-                            else runAsCmd =<< askConfig 
+
+mkConfig c = case get runMode c of WithGUI -> runAsGui cfg
+                                   ImageFile -> runAsCmd cfg
+  where cfg = configForRender . head $ get renders c
+
+configForRender r = (mode, grad, cfg)
+  where (mode, dg) = case get renderMode r of
+                         C.Roots d -> (Roots, d)
+                         C.IFS d   -> (IFS, d)
+        cfg = Config [-1, 1] (toTuple $ get C.outputSize r) dg
+                     (coordToComplex $ get renderCenter r)
+                     (fst $ get renderSize r)
+        grad = onInput (* (2 / fromIntegral dg)) 
+             . gradientFromSpec monochrome black $ get gradSpec r
+                      
+
+-- parseGuiArgs :: Maybe (Mode, String, Config Int) -> IO ()
+-- parseGuiArgs (Just cfg) = putStrLn "Using command line args." >> runAsGui cfg
+-- parseGuiArgs Nothing    = do 
+--     cfg' <- loadConfigFile
+--     case cfg' of
+--         Nothing  -> putStrLn "No valid config file found. (roots.ini)"
+--         Just cfg -> runAsGui cfg
+
+-- parseCmdArgs :: Maybe (Mode, String, Config Int) -> IO ()
+-- parseCmdArgs (Just cfg) = putStrLn "Using command line args." >> runAsCmd cfg
+-- parseCmdArgs Nothing    = do 
+--     cfg' <- loadConfigFile
+--     case cfg' of
+--         Nothing -> do 
+--             putStrLn "No valid config file found. (roots.ini)"
+--             runAsCmd =<< askConfig
+--         Just cfg -> do
+--             ans <- askYN "Valid config file found. Use config file? (y/n) "
+--             if ans then runAsCmd cfg else askAboutEverything
+
+
+-- askAboutEverything = do useGUI <- askYN "Run as GUI? (y/n)"
+--                         if useGUI 
+--                             then runAsGui =<< askConfig 
+--                             else runAsCmd =<< askConfig 
 
 
 

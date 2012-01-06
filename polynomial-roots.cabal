@@ -25,4 +25,5 @@ Executable polynomial-roots
                      fclabels >= 1.0,
                      mtl >= 2.0,
                      transformers >= 0.2,
-                     directory >= 1.1
+                     directory >= 1.1,
+                     containers >= 0.4

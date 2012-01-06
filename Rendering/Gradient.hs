@@ -68,7 +68,38 @@ monochrome = fadeIn white
 gradientByName "warm" = Just warm
 gradientByName "cold" = Just cold
 gradientByName "monochrome" = Just monochrome
+gradientByName "transparent" = Just $ constant transparent
 gradientByName _ = Nothing
+
+gradientFromSpec :: Gradient AlphaColour Double -> Colour Double 
+                 -> GradientSpec -> Gradient Colour Double 
+gradientFromSpec def bg gSpec = opacify bg $ fromExpr gSpec ?? def
+
+-- fromExpr :: GradientSpec -> Maybe (Gradient AlphaColour Double)
+fromExpr (NamedGradient g) = gradientByName g
+fromExpr (Split gns g) = splitGrads gns g
+fromExpr (Combine f xs) = combineGrads (getBlendFunc f) =<< mapM fromExpr xs
+fromExpr (Transform f g) = getTransFunc f <$> fromExpr g
+
+
+-- combineGrads :: (Gradient AlphaColour a -> Gradient AlphaColour a -> Gradient AlphaColour a) 
+--             -> [Gradient AlphaColour a] -> Maybe (Gradient AlphaColour a)
+combineGrads f [] = Nothing
+combineGrads f [x] = Just x
+combineGrads f (x:xs) = Just $ foldl f x xs
+
+splitGrads [] g = fromExpr g
+splitGrads ((g1, n1):gns) g = adjacent n1 transparent <$> g1' <*> splitGrads gns g
+  where g1' = fromExpr g1
+
+-- getBlendFunc :: BlendFunction -> Gradient AlphaColour Double 
+--              -> Gradient AlphaColour Double -> Gradient AlphaColour Double
+getBlendFunc Blend = blend 0.5
+getBlendFunc Overlay = (<>)
+
+getTransFunc Invert = invert
+getTransFunc (Exponent n) = onInput (** n)
+getTransFunc Reverse = onInput (1 -)
 
 --------------------------------------------------------------------------------
 --Converting polynomials to values to be able to apply gradients.

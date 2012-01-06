@@ -1,15 +1,15 @@
 {-# LANGUAGE TypeFamilies, TypeSynonymInstances,
              FlexibleContexts, FlexibleInstances #-}
 module Types ( module Types
+             , module Configuration
              , module Data.Complex
              ) where
 
 import Data.Complex
+import Configuration hiding (center, Roots, IFS)
 
 --------------------------------------------------------------------------------
 --Basic datatypes.
-
-type Degree = Int
 
 --Polynomials. Constant coefficient is the 0th term.
 --Have to be able to coerce coefficients into the complex numbers,
