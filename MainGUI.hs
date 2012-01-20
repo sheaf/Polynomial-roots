@@ -11,7 +11,7 @@ import Graphics.UI.SDL.Events (Event(..))
 import Data.Foldable (Foldable(), toList)
 import Data.Colour
 
-import Types hiding (Config(..), Gradient)
+import Types hiding (Config(..), Gradient, outputSize)
 import Settings hiding (size)
 import qualified Settings as S
 import Util
