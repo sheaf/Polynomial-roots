@@ -98,11 +98,11 @@ gradientFromSpec def bg gSpec = opacify bg $ fromExpr gSpec ?? def
                             
 --fromExpr :: GradientSpec -> Maybe (Gradient Double AlphaColour Double)
 fromExpr (NamedGradient g) = gradientByName g
---fromExpr (Split gns g) = splitGrads gns g
---fromExpr (Combine f xs) = combineGrads (getBlendFunc f) =<< mapM fromExpr xs
---fromExpr (Transform f g) = getTransFunc f <$> fromExpr g
+fromExpr (Split gns g) = splitGrads gns g
+fromExpr (Combine f xs) = combineGrads (getBlendFunc f) =<< mapM fromExpr xs
+fromExpr (Transform f g) = getTransFunc f <$> fromExpr g
 
-{-
+
 -- combineGrads :: (Gradient AlphaColour a -> Gradient AlphaColour a -> Gradient AlphaColour a) 
 --             -> [Gradient AlphaColour a] -> Maybe (Gradient AlphaColour a)
 combineGrads f [] = Nothing
@@ -121,7 +121,6 @@ getBlendFunc Overlay = (<>)
 getTransFunc Invert = invert
 getTransFunc (Exponent n) = onInput (** n)
 getTransFunc Reverse = onInput (1 -)
--}
 
 --------------------------------------------------------------------------------
 --Converting polynomials to values to be able to apply gradients.

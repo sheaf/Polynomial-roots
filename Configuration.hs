@@ -32,9 +32,9 @@ data TransFunc = Invert | Exponent Double | Reverse
 
 
 data GradientSpec = NamedGradient String
-                  -- | Split [(GradientSpec, Double)] GradientSpec
-                  -- | Combine BlendFunction [GradientSpec]
-                  -- | Transform TransFunc GradientSpec
+                   | Split [(GradientSpec, Double)] GradientSpec
+                   | Combine BlendFunction [GradientSpec]
+                   | Transform TransFunc GradientSpec
     deriving (Eq, Ord, Read, Show)
 
 data Render m = Render { _renderSpec :: RenderSpec
