@@ -13,7 +13,7 @@ to make it look like the corresponding plot of roots.
 
 
 The program can parse options at runtime, otherwise it takes in a config file,
-such as the following:
+such as the following (no blank line at the beginning):
 
 run-mode: gui
 render: roots 28{

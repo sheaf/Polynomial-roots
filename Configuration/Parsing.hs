@@ -14,12 +14,12 @@ import Debug.Trace
 
 type ParseErr = String
 
-parseConfig :: (Monad m) => String -> String -> m (Either ParseErr Configuration)
+parseConfig :: (Monad m) => String -> String -> m (Either ParseErr (Configuration n))
 parseConfig name str = liftM (left show) (runParserT pConfiguration () name str)
                        
 
 
-pConfiguration :: (Monad m) => ParsecT String u m Configuration
+pConfiguration :: (Monad m) => ParsecT String u m (Configuration n)
 pConfiguration = do md <- pField "run-mode" *> pRunMode
                     many1 newline
                     rds <- many1 pRender
@@ -30,7 +30,7 @@ pRunMode :: (Monad m) => ParsecT String u m RunMode
 pRunMode = pString "gui" *> return WithGUI
        <|> pString "file" *> return ImageFile
 
-pRender :: (Monad m) => ParsecT String u m Render
+pRender :: (Monad m) => ParsecT String u m (Render n)
 pRender = do md <- pField "render" *> pRenderMode <* pString "{" 
              many newline
              ctr <- pField "center" *> pCd2 pDouble
@@ -60,11 +60,12 @@ pGradSpec = pGradName
         <|> pParens pGradSpecExpr
 
 pGradSpecExpr :: (Monad m) => ParsecT String u m GradientSpec
-pGradSpecExpr = choice [pGradName, pGradSplit, pGradCmb, pGradTrans]
+pGradSpecExpr = choice [pGradName] --, pGradSplit, pGradCmb, pGradTrans]
 
 pGradName :: (Monad m) => ParsecT String u m GradientSpec
 pGradName = NamedGradient <$> pName
 
+{-
 pGradSplit :: (Monad m) => ParsecT String u m GradientSpec
 pGradSplit = do pString "split"
                 pString "["
@@ -97,6 +98,7 @@ pGradTransFunc = choice [ pString "inv" *> return Invert
                         , pString "exp" *> (Exponent <$> pDouble)
                         , pString "rev" *> return Reverse
                         ]
+-}
 
 pRenderMode :: (Monad m) => ParsecT String u m RenderMode
 pRenderMode = Roots <$> (pString "roots" *> pInt)

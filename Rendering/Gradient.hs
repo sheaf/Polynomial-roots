@@ -8,53 +8,48 @@ import Control.Applicative
 import Data.Colour.Names
 import Data.List
 import Rendering.Colour
-import Types hiding(Gradient)
+import Types
 import Util
 
-newtype Gradient clr a = Grad { runGrad :: Maybe Double -> clr a }
-
-colourAt :: Gradient AlphaColour Double -> Maybe Double -> RGBAColour
-colourAt = runGrad
-
-apGrad :: Maybe Double -> Gradient f a -> f a
+apGrad :: m -> Gradient m f a -> f a
 apGrad = flip runGrad
 
-instance (AffineSpace f) => AffineSpace (Gradient f) where
+instance (AffineSpace f) => AffineSpace (Gradient m f) where
     affineCombo xs z = Grad $ \n -> calcGrad n
       where calcGrad n = affineCombo (second (apGrad n) <$> xs) (apGrad n z)
 
-instance (ColourOps f) => ColourOps (Gradient f) where
+instance (ColourOps f) => ColourOps (Gradient m f) where
     over c (Grad f) = Grad $ \n -> over c (f n)
     darken s (Grad f) = Grad $ \n -> darken s (f n)
 
-instance (Monoid (f a)) => Monoid (Gradient f a) where
+instance (Monoid (f a)) => Monoid (Gradient m f a) where
     mempty = constant unit
     mappend (Grad g1) (Grad g2) = Grad $ \n -> g1 n <> g2 n
 
 
-constant :: f a -> Gradient f a
+constant :: f a -> Gradient m f a
 constant = Grad . const
 
-linear :: (Monoid (f a), Fractional a, AffineSpace f) => f a -> f a -> Gradient f a
-linear c1 c2 = Grad $ maybe unit (\n -> blend (realToFrac n) c1 c2)
+linear :: (Monoid (f a), Fractional a, AffineSpace f) => f a -> f a -> Gradient a f a
+linear c1 c2 = Grad (\n -> blend n c1 c2)
 
-onInput :: (Double -> Double) -> Gradient f a -> Gradient f a
-onInput f = Grad . (. fmap f) . runGrad
+onInput :: (m -> m) -> Gradient m f a -> Gradient m f a
+onInput f = Grad . (. f) . runGrad
 
-onOutput :: (f a -> g a) -> Gradient f a -> Gradient g a
+onOutput :: (f a -> g a) -> Gradient m f a -> Gradient m g a
 onOutput f = Grad . (f .) . runGrad
 
-invert, square, squareRoot :: Gradient f a -> Gradient f a
+invert, square, squareRoot :: Gradient Double f a -> Gradient Double f a
 invert = onInput recip
 square = onInput (^ 2)
 squareRoot = onInput sqrt
 
-adjacent :: Double -> f a -> Gradient f a -> Gradient f a -> Gradient f a
-adjacent x z g1 g2 = Grad $ maybe z (\n -> runGrad (if n < x then g1 else g2) $ Just n)
+adjacent :: Double -> f a -> Gradient Double f a -> Gradient Double f a -> Gradient Double f a
+adjacent x z g1 g2 = Grad (\n -> runGrad (if n < x then g1 else g2) $ n)
 
 --Takes a list of colours and control points, giving the corresponding gradient.
-collate :: (Monoid (f a), Ord a, Fractional a, AffineSpace f) => [(f a, a)] -> Gradient f a
-collate cvs1 = Grad $ maybe unit (blender cvs')
+collate :: (Monoid (f a), Ord a, Fractional a, AffineSpace f) => [(f a, a)] -> Gradient a f a
+collate cvs1 = Grad $ (blender cvs')
     where cvs2 = sortBy (\a b -> compare (snd a) (snd b)) cvs1
           cvs3 = filter (\(_,b) -> (b >= 0 && b <= 1)) cvs2
           cvs' = case (head cvs3, last cvs3) of
@@ -63,7 +58,7 @@ collate cvs1 = Grad $ maybe unit (blender cvs')
                       ((a,_),(_,1)) -> [(a,0)] ++ cvs3
                       ((a,_),(b,_)) -> [(a,0)] ++ cvs3 ++ [(b,1)]
           blender cvs n = blend n' c2 c1
-              where n2 = min 1 . max 0 $ realToFrac n
+              where n2 = min 1 . max 0 $ n
                     (c1,a1) = case (filter (\(a,b) -> b == n2) cvs) of
                                    [] -> last (filter (\(a,b) -> b < n2) cvs)
                                    ls -> head ls
@@ -72,21 +67,23 @@ collate cvs1 = Grad $ maybe unit (blender cvs')
                                    ls -> last ls
                     n' = if a1==a2 then n2 else (n2-a1)/(a2-a1)
 
-asHue :: Gradient AlphaColour Double
-asHue = Grad $ maybe transparent (\n -> opaque $ hsv n 1 1)
+asHue :: Gradient Double AlphaColour Double
+asHue = Grad (\n -> opaque $ hsv n 1 1)
 
-opacify :: (Num a) => Colour a -> Gradient AlphaColour a -> Gradient Colour a
+opacify :: (Num a) => Colour a -> Gradient m AlphaColour a -> Gradient m Colour a
 opacify bg = onOutput (`over` bg)
 
 fadeIn c = linear (opaque c) transparent
 fadeOut c = linear transparent (opaque c)
 
+warm, cold, sunset :: Gradient Double AlphaColour Double
 warm = collate [(opaque black,0),(opaque red,1/3),(opaque yellow,2/3),(opaque white,1)]
 cold = collate [(opaque black,0),(opaque blue,1/3),(opaque cyan,2/3),(opaque white,1)]
-sunset = collate [(opaque black,0),(opaque purple, 1/5), (opaque firebrick, 2/5), (opaque goldenrod, 1/2), (opaque orange, 4/5), (opaque white, 1)]
+sunset = collate [(opaque black,0),(opaque purple, 1/5), (opaque firebrick, 2/5), (opaque goldenrod, 1/2), (opaque orange, 3/5), (opaque white, 1)]
 
 monochrome = fadeIn white
 
+gradientByName :: String -> Maybe(Gradient Double AlphaColour Double)
 gradientByName "warm" = Just warm
 gradientByName "cold" = Just cold
 gradientByName "sunset" = Just sunset
@@ -95,17 +92,17 @@ gradientByName "transparent" = Just $ constant transparent
 gradientByName _ = Nothing
 
 
-gradientFromSpec :: Gradient AlphaColour Double -> Colour Double 
-                 -> GradientSpec -> Gradient Colour Double 
+--gradientFromSpec :: Gradient m AlphaColour Double -> Colour Double 
+--                 -> GradientSpec -> Gradient m Colour Double 
 gradientFromSpec def bg gSpec = opacify bg $ fromExpr gSpec ?? def
-
--- fromExpr :: GradientSpec -> Maybe (Gradient AlphaColour Double)
+                            
+--fromExpr :: GradientSpec -> Maybe (Gradient Double AlphaColour Double)
 fromExpr (NamedGradient g) = gradientByName g
-fromExpr (Split gns g) = splitGrads gns g
-fromExpr (Combine f xs) = combineGrads (getBlendFunc f) =<< mapM fromExpr xs
-fromExpr (Transform f g) = getTransFunc f <$> fromExpr g
+--fromExpr (Split gns g) = splitGrads gns g
+--fromExpr (Combine f xs) = combineGrads (getBlendFunc f) =<< mapM fromExpr xs
+--fromExpr (Transform f g) = getTransFunc f <$> fromExpr g
 
-
+{-
 -- combineGrads :: (Gradient AlphaColour a -> Gradient AlphaColour a -> Gradient AlphaColour a) 
 --             -> [Gradient AlphaColour a] -> Maybe (Gradient AlphaColour a)
 combineGrads f [] = Nothing
@@ -124,6 +121,7 @@ getBlendFunc Overlay = (<>)
 getTransFunc Invert = invert
 getTransFunc (Exponent n) = onInput (** n)
 getTransFunc Reverse = onInput (1 -)
+-}
 
 --------------------------------------------------------------------------------
 --Converting polynomials to values to be able to apply gradients.

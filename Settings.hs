@@ -65,5 +65,5 @@ onSnd = lens snd (\y (x, _) -> (x, y))
 envToConfig ic = do (Settings r d c w) <- ask
                     return $ T.Config ic r d c w
 
-cfgToSettings (T.Config _ r d c w) = Settings r d c w
+cfgToSettings (T.Config _ r d c w _) = Settings r d c w
 

@@ -6,6 +6,7 @@ module Types ( module Types
              ) where
 
 import Data.Complex
+import Rendering.Colour
 import Configuration hiding (center, Roots, IFS)
 
 --------------------------------------------------------------------------------
@@ -48,14 +49,16 @@ type Resolution = (Int,Int)
 type Center = Complex Double
 type Width = Double
 type Pixel = (Int,Int)
-type Gradient v c = (v -> c, String)
+newtype Gradient m clr a = Grad { runGrad :: m -> clr a }
 data Mode = Roots | IFS | Both deriving (Eq, Ord, Read, Show)
-data Config a = Config { coefficients :: IterCoeffs a
-                       , resolution   :: Resolution
-                       , degree       :: Degree
-                       , center       :: Center
-                       , width        :: Width
-                       }
+data ColourMode = Density | Source1 | Source2
+data Config m a = Config { coefficients :: IterCoeffs a
+                         , resolution   :: Resolution
+                         , degree       :: Degree
+                         , center       :: Center
+                         , width        :: Width
+                         , cgradient    :: Gradient m Colour Double
+                         }
 
 --------------------------------------------------------------------------------
 --Basic functions.
