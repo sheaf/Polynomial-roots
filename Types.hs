@@ -51,7 +51,6 @@ type Width = Double
 type Pixel = (Int,Int)
 newtype Gradient m clr a = Grad { runGrad :: m -> clr a }
 data Mode = Roots | IFS | Both deriving (Eq, Ord, Read, Show)
-data ColourMode = Density | Source1 | Source2
 data Config m a = Config { coefficients :: IterCoeffs a
                          , resolution   :: Resolution
                          , degree       :: Degree

@@ -11,6 +11,15 @@ import Rendering.Colour
 import Types
 import Util
 
+--Useful monoid amenable to colouring (for source colouring especially).
+--Think: (R,G,B,Opacity).
+--TODO: use standard colour types that are already defined!!
+newtype SourceSum = Source (Double,Double,Double,Double)
+instance Monoid SourceSum where
+    mempty = Source (0,0,0,0) -- technically any (r,g,b,0)
+    mappend (Source (r1,g1,b1,n)) (Source (r2,g2,b2,m)) = 
+        Source ( (r1*n + r2*m)/(n+m),(g1*n + g2*m)/(n+m),(b1*n + b2*m)/(n+m), n+m-n*m) 
+
 apGrad :: m -> Gradient m f a -> f a
 apGrad = flip runGrad
 
@@ -81,14 +90,18 @@ warm = collate [(opaque black,0),(opaque red,1/3),(opaque yellow,2/3),(opaque wh
 cold = collate [(opaque black,0),(opaque blue,1/3),(opaque cyan,2/3),(opaque white,1)]
 sunset = collate [(opaque black,0),(opaque purple, 1/5), (opaque firebrick, 2/5), (opaque goldenrod, 1/2), (opaque orange, 3/5), (opaque white, 1)]
 
+sourceGradient :: Gradient (SourceSum) AlphaColour Double
+sourceGradient = Grad $ (\(Source (r,g,b,a)) -> rgba r g b a)
+
 monochrome = fadeIn white
 
-gradientByName :: String -> Maybe(Gradient Double AlphaColour Double)
+--gradientByName :: String -> Maybe(Gradient Double AlphaColour Double)
 gradientByName "warm" = Just warm
 gradientByName "cold" = Just cold
 gradientByName "sunset" = Just sunset
 gradientByName "monochrome" = Just monochrome
 gradientByName "transparent" = Just $ constant transparent
+--gradientByName "source" = Just sourceGradient
 gradientByName _ = Nothing
 
 
