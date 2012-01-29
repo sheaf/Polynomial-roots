@@ -62,11 +62,15 @@ collate cvs1 = Grad $ maybe unit (blender cvs')
                       ((_,0),(b,_)) -> cvs3 ++ [(b,1)]
                       ((a,_),(_,1)) -> [(a,0)] ++ cvs3
                       ((a,_),(b,_)) -> [(a,0)] ++ cvs3 ++ [(b,1)]
-          blender cvs n = blend n' c1 c2
+          blender cvs n = blend n' c2 c1
               where n2 = min 1 . max 0 $ realToFrac n
-                    (c1,a1) = last $ takeWhile (\(a,b) -> b <= n2) cvs
-                    (c2,a2) = head $ dropWhile (\(a,b) -> b < n2) cvs
-                    n' = (n2-a1)/(a2-a1)
+                    (c1,a1) = case (filter (\(a,b) -> b == n2) cvs) of
+                                   [] -> last (filter (\(a,b) -> b < n2) cvs)
+                                   ls -> head ls
+                    (c2,a2) = case (filter (\(a,b) -> b == n2) cvs) of
+                                   [] -> head (filter (\(a,b) -> b > n2) cvs)
+                                   ls -> last ls
+                    n' = if a1==a2 then n2 else (n2-a1)/(a2-a1)
 
 asHue :: Gradient AlphaColour Double
 asHue = Grad $ maybe transparent (\n -> opaque $ hsv n 1 1)
@@ -79,7 +83,7 @@ fadeOut c = linear transparent (opaque c)
 
 warm = collate [(opaque black,0),(opaque red,1/3),(opaque yellow,2/3),(opaque white,1)]
 cold = collate [(opaque black,0),(opaque blue,1/3),(opaque cyan,2/3),(opaque white,1)]
-sunset = collate [(opaque black,0),(opaque purple, 1/5), (opaque orange, 1/2), (opaque white, 1)]
+sunset = collate [(opaque black,0),(opaque purple, 1/5), (opaque firebrick, 2/5), (opaque goldenrod, 1/2), (opaque orange, 4/5), (opaque white, 1)]
 
 monochrome = fadeIn white
 
@@ -144,7 +148,7 @@ toGValue1 cfs p = z * evaluate p' z
 
 --This one should be used with gradients such that g(0)=g(1).
 --This uses the scale factors.
-toGValue2 :: (Coefficient a) => IterCoeffs a -> Center -> Polynomial a -> Double
-toGValue2 cfs c p = 0.5 + 1/(2*pi) * phase scale
+toGValue2 :: (Coefficient a) => IterCoeffs a ->  Polynomial a -> Center -> Double
+toGValue2 cfs p c = 0.5 + 1/(2*pi) * phase scale
     where scale = (negate . recip . (`evaluate` c)) $ derivative $ (map toComplex) $ p
 

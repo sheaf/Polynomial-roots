@@ -107,27 +107,20 @@ runWriteImage fn g xs r = do rst <- r
 getPlot :: (Real a, Coefficient a) => Mode -> String -> Config a 
         -> (forall f v i o. Foldable f => f i -> IO (IOArrayRaster v i (Maybe Double)) -> r)
         -> r
-getPlot Roots "source" cfg k = k (getRoots cfg) $ 
-    mapOutput (fmap ((/ 2 ^ fromIntegral (Types.degree cfg)) . fromInteger) . getFirst) <$> 
-        mkRasterizer (mkRootPlot sourcePoly) (rbCfg cfg) (ibCfg cfg)
+--getPlot Roots "source" cfg k = k (getRoots cfg) $ 
+--    mapOutput (fmap ((/ 2 ^ fromIntegral (Types.degree cfg)) . fromInteger) . getFirst) <$> 
+--        mkRasterizer (mkRootPlot sourcePoly) (rbCfg cfg) (ibCfg cfg)
 getPlot Roots "density" cfg k = k (getRoots cfg) $ 
     mapOutput (Just . getSum) <$>
-        mkRasterizer (mkRootPlot $ density 1) (rbCfg cfg) (ibCfg cfg)
+        mkRasterizer (mkRootPlot $ density) (rbCfg cfg) (ibCfg cfg)
 getPlot IFS "density" cfg k = k (ifsPoints cfg) $ 
     mapOutput (Just . getSum) <$> 
-        mkRasterizer (mkIFSPlot $ density 1) (rbCfg cfg) (ibCfg cfg)
+        mkRasterizer (mkIFSPlot $ density) (rbCfg cfg) (ibCfg cfg)
 getPlot _ _ _ _ = error "TODO -- handle getPlot cases"
 
 rbCfg (Config _ (rx,ry) _ _ _) = (mkCd2 0 0, mkCd2 rx ry)
 ibCfg (Config _ _ _ c w) = (pair mkCd2 (c - wC), pair mkCd2 (c + wC))
   where wC = (w/2) :+ (w/2)
-
-density :: v -> a -> b -> Sum v
-density n _ _ = Sum n
-
-sourcePoly :: (Coefficient cf, Ord cf) => Polynomial cf -> a -> First Integer
-sourcePoly p _ = First . Just . round . toAbs
-               $ foldr (\x n -> x + 2 * n) 0 (min 1 . max 0 <$> reverse p)
 
 mkRootPlot :: (Polynomial cf -> Root -> v) -> RootPlot cf -> (InpCoord, v)
 mkRootPlot f (RootPlot p r) = (pair mkCd2 r, f p r)
