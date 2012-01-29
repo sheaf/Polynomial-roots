@@ -94,7 +94,8 @@ runAsGui (mode, g, cfg) = do
 showGradient gname Nothing = putStrLn $ concat ["Gradient ", gname, " not found."]
 showGradient gname (Just _) = putStrLn $ concat ["Gradient: ", gname]
 
-findGradient name d = opacify black . onInput (* (2 / d)) <$> gradientByName name
+--findGradient name d = opacify black . onInput (* (2 / d)) <$> gradientByName name
+findGradient name d = gradientByName name
 
 runGuiMain s g xs r = do rst <- r
                          runEnvT (guiMain xs rst g) s
@@ -110,10 +111,10 @@ getPlot Roots "source" cfg k = k (getRoots cfg) $
     mapOutput (fmap ((/ 2 ^ fromIntegral (Types.degree cfg)) . fromInteger) . getFirst) <$> 
         mkRasterizer (mkRootPlot sourcePoly) (rbCfg cfg) (ibCfg cfg)
 getPlot Roots "density" cfg k = k (getRoots cfg) $ 
-    mapOutput (Just . (+ 1) . getSum) <$>
+    mapOutput (Just . getSum) <$>
         mkRasterizer (mkRootPlot $ density 1) (rbCfg cfg) (ibCfg cfg)
 getPlot IFS "density" cfg k = k (ifsPoints cfg) $ 
-    mapOutput (Just . log . (+ 1) . getSum) <$> 
+    mapOutput (Just . getSum) <$> 
         mkRasterizer (mkIFSPlot $ density 1) (rbCfg cfg) (ibCfg cfg)
 getPlot _ _ _ _ = error "TODO -- handle getPlot cases"
 

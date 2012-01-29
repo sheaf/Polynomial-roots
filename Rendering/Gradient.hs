@@ -6,6 +6,7 @@ module Rendering.Gradient where
 import Control.Arrow
 import Control.Applicative
 import Data.Colour.Names
+import Data.List
 import Rendering.Colour
 import Types hiding(Gradient)
 import Util
@@ -51,6 +52,22 @@ squareRoot = onInput sqrt
 adjacent :: Double -> f a -> Gradient f a -> Gradient f a -> Gradient f a
 adjacent x z g1 g2 = Grad $ maybe z (\n -> runGrad (if n < x then g1 else g2) $ Just n)
 
+--Takes a list of colours and control points, giving the corresponding gradient.
+collate :: (Monoid (f a), Ord a, Fractional a, AffineSpace f) => [(f a, a)] -> Gradient f a
+collate cvs1 = Grad $ maybe unit (blender cvs')
+    where cvs2 = sortBy (\a b -> compare (snd a) (snd b)) cvs1
+          cvs3 = filter (\(_,b) -> (b >= 0 && b <= 1)) cvs2
+          cvs' = case (head cvs3, last cvs3) of
+                      ((_,0),(_,1)) -> cvs3
+                      ((_,0),(b,_)) -> cvs3 ++ [(b,1)]
+                      ((a,_),(_,1)) -> [(a,0)] ++ cvs3
+                      ((a,_),(b,_)) -> [(a,0)] ++ cvs3 ++ [(b,1)]
+          blender cvs n = blend n' c1 c2
+              where n2 = min 1 . max 0 $ realToFrac n
+                    (c1,a1) = last $ takeWhile (\(a,b) -> b <= n2) cvs
+                    (c2,a2) = head $ dropWhile (\(a,b) -> b < n2) cvs
+                    n' = (n2-a1)/(a2-a1)
+
 asHue :: Gradient AlphaColour Double
 asHue = Grad $ maybe transparent (\n -> opaque $ hsv n 1 1)
 
@@ -60,16 +77,19 @@ opacify bg = onOutput (`over` bg)
 fadeIn c = linear (opaque c) transparent
 fadeOut c = linear transparent (opaque c)
 
-warm = mconcat [square . square $ fadeIn white, square $ fadeIn yellow, fadeIn red]
-cold = mconcat [square . square $ fadeIn white, square $ fadeIn cyan, fadeIn blue]
+warm = collate [(opaque black,0),(opaque red,1/3),(opaque yellow,2/3),(opaque white,1)]
+cold = collate [(opaque black,0),(opaque blue,1/3),(opaque cyan,2/3),(opaque white,1)]
+sunset = collate [(opaque black,0),(opaque purple, 1/5), (opaque orange, 1/2), (opaque white, 1)]
 
 monochrome = fadeIn white
 
 gradientByName "warm" = Just warm
 gradientByName "cold" = Just cold
+gradientByName "sunset" = Just sunset
 gradientByName "monochrome" = Just monochrome
 gradientByName "transparent" = Just $ constant transparent
 gradientByName _ = Nothing
+
 
 gradientFromSpec :: Gradient AlphaColour Double -> Colour Double 
                  -> GradientSpec -> Gradient Colour Double 
