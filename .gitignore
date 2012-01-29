@@ -3,6 +3,8 @@
 *.o
 *.hi
 *.ini
+*.config
 *.prof
 Main
 dist
+TODO

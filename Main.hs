@@ -63,18 +63,11 @@ rootsRoutine cfg g = do
     putStrLn "Done writing to file 'roots_image.png'. Finished roots routine."
   where rootsfile = "roots_image.png"
 
-
-main :: IO()
-main = do
-    putStrLn "This program produces images of polynomial roots."
-    putStrLn ""
-    handleOptions
-
 runAsCmd :: (Mode, Gradient Colour Double, Config Int) -> IO ()
 runAsCmd (mode, g, cfg) = do 
     putStrLn ""
     showConfig cfg
---     showGradient gname g
+    --showGradient gname g
     putStrLn ""
     case mode of
         Roots -> rootsRoutine cfg g
@@ -86,16 +79,17 @@ runAsCmd (mode, g, cfg) = do
     getLine
     putStrLn "Bye!"
 --   where g = findGradient gname (fromIntegral $ Types.degree cfg)
---         g' = g ?? opacify black monochrome
+--         g'= g ?? opacify black monochrome
 
 runAsGui :: (Mode, Gradient Colour Double, Config Int) -> IO ()
 runAsGui (mode, g, cfg) = do
+    putStrLn ""
     showConfig cfg
---     showGradient gname g
+    --showGradient gname g
     putStrLn "    Starting GUI..."
-    getPlot mode "source" cfg (runGuiMain (cfgToSettings cfg) g)
---   where g = findGradient gname (fromIntegral $ Types.degree cfg)
---         g' = g ?? opacify black monochrome
+    getPlot mode "density" cfg (runGuiMain (cfgToSettings cfg) g)
+    --where g = findGradient gname (fromIntegral $ Types.degree cfg)
+    --      g'= g ?? opacify black monochrome
 
 showGradient gname Nothing = putStrLn $ concat ["Gradient ", gname, " not found."]
 showGradient gname (Just _) = putStrLn $ concat ["Gradient: ", gname]
@@ -116,7 +110,7 @@ getPlot Roots "source" cfg k = k (getRoots cfg) $
     mapOutput (fmap ((/ 2 ^ fromIntegral (Types.degree cfg)) . fromInteger) . getFirst) <$> 
         mkRasterizer (mkRootPlot sourcePoly) (rbCfg cfg) (ibCfg cfg)
 getPlot Roots "density" cfg k = k (getRoots cfg) $ 
-    mapOutput (Just . log . (+ 1) . getSum) <$>
+    mapOutput (Just . (+ 1) . getSum) <$>
         mkRasterizer (mkRootPlot $ density 1) (rbCfg cfg) (ibCfg cfg)
 getPlot IFS "density" cfg k = k (ifsPoints cfg) $ 
     mapOutput (Just . log . (+ 1) . getSum) <$> 
@@ -140,56 +134,28 @@ mkRootPlot f (RootPlot p r) = (pair mkCd2 r, f p r)
 mkIFSPlot :: (Polynomial cf -> Root -> v) -> IFSPlot cf -> (InpCoord, v)
 mkIFSPlot f (IFSPlot c) = (pair mkCd2 c, f [] c)
 
-askYN :: String -> IO Bool
-askYN s = do
-    putStrLn s
-    ans' <- getLine
-    let ans = map toLower ans'
-    case ans of
-        "y" -> return True
-        "n" -> return False
-        _ -> do putStrLn "Sorry? "
-                askYN s
-
---this should be changed to only accept exception: file doesn't exist...
-alwaysError :: IOException -> IO(Maybe a)
-alwaysError _ = return Nothing
-
--- parseConfigFile :: (Coefficient a) => IO (Maybe (Mode, String, Config a))
--- parseConfigFile = do
---     file' <- handle alwaysError (fmap Just $ openFile "roots.ini" ReadMode)
---     case file' of
---         Nothing -> return Nothing
---         Just file -> do strings <- fmap lines $ hGetContents file
---                         return $ parseMConfig (take 7 strings)
-
-handleOptions :: IO ()
+handleOptions :: IO(Configuration)
 handleOptions = do
     args <- getArgs
     getConfig args
-    
---     case args of
---         ("gui":args') -> parseGuiArgs =<< loadConfigFile args'
---         _             -> parseCmdArgs =<< loadConfigFile args
---         _             -> parseCmdArgs =<< parseMConfig args
 
-getConfig [] = loadConfigFile "roots.config"
-getConfig (arg:_) = loadConfigFile arg
+getConfig :: [String] -> IO(Configuration)
+--getConfig [] = loadConfigFile "roots.config"
+--getConfig (arg:_) = loadConfigFile arg
+getConfig _ = loadConfigFile "roots.config"
 
--- loadConfigFile :: String -> IO (Maybe (Mode, Gradient Colour Double, Config Int))
+loadConfigFile :: String -> IO(Configuration)
 loadConfigFile fn = do res <- parseConfig fn =<< readFile fn
                        case res of 
                            Left err -> do putStrLn "Error loading config file:"
-                                          putStrLn err
---                                           return Nothing
-                           Right cfg -> mkConfig cfg
-
-
+                                          error err
+                           Right cfg -> return cfg
 
 mkConfig c = case get runMode c of WithGUI -> runAsGui cfg
                                    ImageFile -> runAsCmd cfg
   where cfg = configForRender . head $ get renders c
 
+-- ??configForRender :: Configuration -> (Mode, Gradient Colour Double, Config Int)
 configForRender r = (mode, grad, cfg)
   where (mode, dg) = case get renderMode r of
                          C.Roots d -> (Roots, d)
@@ -200,32 +166,9 @@ configForRender r = (mode, grad, cfg)
         grad = onInput (* (2 / fromIntegral dg)) 
              . gradientFromSpec monochrome black $ get gradSpec r
                       
-
--- parseGuiArgs :: Maybe (Mode, String, Config Int) -> IO ()
--- parseGuiArgs (Just cfg) = putStrLn "Using command line args." >> runAsGui cfg
--- parseGuiArgs Nothing    = do 
---     cfg' <- loadConfigFile
---     case cfg' of
---         Nothing  -> putStrLn "No valid config file found. (roots.ini)"
---         Just cfg -> runAsGui cfg
-
--- parseCmdArgs :: Maybe (Mode, String, Config Int) -> IO ()
--- parseCmdArgs (Just cfg) = putStrLn "Using command line args." >> runAsCmd cfg
--- parseCmdArgs Nothing    = do 
---     cfg' <- loadConfigFile
---     case cfg' of
---         Nothing -> do 
---             putStrLn "No valid config file found. (roots.ini)"
---             runAsCmd =<< askConfig
---         Just cfg -> do
---             ans <- askYN "Valid config file found. Use config file? (y/n) "
---             if ans then runAsCmd cfg else askAboutEverything
-
-
--- askAboutEverything = do useGUI <- askYN "Run as GUI? (y/n)"
---                         if useGUI 
---                             then runAsGui =<< askConfig 
---                             else runAsCmd =<< askConfig 
-
-
-
+main :: IO()
+main = do
+    putStrLn "This program produces images of polynomial roots."
+    putStrLn ""
+    cfg <- handleOptions
+    mkConfig cfg

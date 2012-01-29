@@ -13,12 +13,12 @@ to make it look like the corresponding plot of roots.
 
 
 The program can parse options at runtime, otherwise it takes in a config file,
-such as the following (no blank line at the beginning):
+such as the following:
 
-roots                              Choice of routine (roots/ifs/both)
-[-1,1]                             Set of coefficients
-(400,400)                          Resolution (width,height)
-40                                 Degree
-0.672233 :+ (-0.0921782)           Center (this one produces feather-like patterns) 
-0.00001                            Width 
-warm 12                            Gradient (warm/cold/grey/binary, + possible parameter)
+run-mode: gui
+render: roots 28{
+center: 0.1275 0.7000  
+size: 0.001 0.001
+output-size: 400 400
+fix-aspect: None
+gradient: warm}

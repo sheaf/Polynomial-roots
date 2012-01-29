@@ -4,9 +4,9 @@
 module Configuration.Parsing where
 
 import Data.Char
-import "parsec3" Text.Parsec
-import "parsec3" Text.Parsec.Char
-import "parsec3" Text.Parsec.Combinator
+import Text.Parsec
+import Text.Parsec.Char
+import Text.Parsec.Combinator
 import Configuration
 import Util
 import Rendering.Coord hiding (elem)
