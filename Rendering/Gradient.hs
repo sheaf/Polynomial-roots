@@ -7,6 +7,7 @@ import Control.Arrow
 import Control.Applicative
 import Data.Colour.Names
 import Data.List
+import Data.Monoid
 import Rendering.Colour
 import Types
 import Util
@@ -16,7 +17,7 @@ import Util
 --TODO: use standard colour types that are already defined!!
 newtype SourceSum = Source (Double,Double,Double,Double)
 instance Monoid SourceSum where
-    mempty = Source (0,0,0,0) -- technically any (r,g,b,0)
+    mempty = Source (0,0,0,0) -- technically any (r,g,b,0)...
     mappend (Source (r1,g1,b1,n)) (Source (r2,g2,b2,m)) = 
         Source ( (r1*n + r2*m)/(n+m),(g1*n + g2*m)/(n+m),(b1*n + b2*m)/(n+m), n+m-n*m) 
 
@@ -33,14 +34,20 @@ instance (ColourOps f) => ColourOps (Gradient m f) where
 
 instance (Monoid (f a)) => Monoid (Gradient m f a) where
     mempty = constant unit
-    mappend (Grad g1) (Grad g2) = Grad $ \n -> g1 n <> g2 n
-
+    mappend (Grad g1) (Grad g2) = Grad $ \n -> mappend (g1 n) (g2 n)
 
 constant :: f a -> Gradient m f a
 constant = Grad . const
 
-linear :: (Monoid (f a), Fractional a, AffineSpace f) => f a -> f a -> Gradient a f a
-linear c1 c2 = Grad (\n -> blend n c1 c2)
+linear :: (Monoid (f a), Fractional a, Ord a, AffineSpace f) => a -> a -> f a -> f a -> Gradient a f a
+linear a1 a2 c1 c2 = Grad (\n -> case (n<a1', n>a2') of
+                                      (True,_) -> mempty
+                                      (_,True) -> mempty
+                                      (False,False) -> case (a2' - a1') of
+                                                            0 -> c1
+                                                            d -> blend ((n-a1')/d) c2 c1
+                          )                                   -- invert arguments of blend!!
+    where (a1',a2') = (min a1 a2, max a1 a2)
 
 onInput :: (m -> m) -> Gradient m f a -> Gradient m f a
 onInput f = Grad . (. f) . runGrad
@@ -53,8 +60,8 @@ invert = onInput recip
 square = onInput (^ 2)
 squareRoot = onInput sqrt
 
-adjacent :: Double -> f a -> Gradient Double f a -> Gradient Double f a -> Gradient Double f a
-adjacent x z g1 g2 = Grad (\n -> runGrad (if n < x then g1 else g2) $ n)
+adjacent :: Ord m => m -> Gradient m f a -> Gradient m f a -> Gradient m f a
+adjacent x g1 g2 = Grad (\n -> runGrad (if n < x then g1 else g2) $ n)
 
 --Takes a list of colours and control points, giving the corresponding gradient.
 collate :: (Monoid (f a), Ord a, Fractional a, AffineSpace f) => [(f a, a)] -> Gradient a f a
@@ -66,7 +73,7 @@ collate cvs1 = Grad $ (blender cvs')
                       ((_,0),(b,_)) -> cvs3 ++ [(b,1)]
                       ((a,_),(_,1)) -> [(a,0)] ++ cvs3
                       ((a,_),(b,_)) -> [(a,0)] ++ cvs3 ++ [(b,1)]
-          blender cvs n = blend n' c2 c1
+          blender cvs n = blend n' c2 c1 -- arguments inverted again!!
               where n2 = min 1 . max 0 $ n
                     (c1,a1) = case (filter (\(a,b) -> b == n2) cvs) of
                                    [] -> last (filter (\(a,b) -> b < n2) cvs)
@@ -85,15 +92,21 @@ opacify bg = onOutput (`over` bg)
 fadeIn c = linear (opaque c) transparent
 fadeOut c = linear transparent (opaque c)
 
-warm, cold, sunset :: Gradient Double AlphaColour Double
-warm = collate [(opaque black,0),(opaque red,1/3),(opaque yellow,2/3),(opaque white,1)]
-cold = collate [(opaque black,0),(opaque blue,1/3),(opaque cyan,2/3),(opaque white,1)]
-sunset = collate [(opaque black,0),(opaque purple, 1/5), (opaque firebrick, 2/5), (opaque goldenrod, 1/2), (opaque orange, 3/5), (opaque white, 1)]
+warm', cold', sunset' :: Gradient Double AlphaColour Double
+warm' = collate [(opaque black,0),(opaque red,1/3),(opaque yellow,2/3),(opaque white,1)]
+cold' = collate [(opaque black,0),(opaque blue,1/3),(opaque cyan,2/3),(opaque white,1)]
+sunset' = collate [(opaque black,0),(opaque purple, 1/5), (opaque firebrick, 2/5), (opaque goldenrod, 1/2), (opaque orange, 3/5), (opaque white, 1)]
+
+warm, cold, sunset :: Gradient (Sum Double) AlphaColour Double
+warm = Grad { runGrad = (runGrad(warm') . getSum ) }
+cold = Grad { runGrad = (runGrad(cold') . getSum ) }
+sunset = Grad { runGrad = (runGrad(sunset') . getSum ) }
 
 sourceGradient :: Gradient (SourceSum) AlphaColour Double
 sourceGradient = Grad $ (\(Source (r,g,b,a)) -> rgba r g b a)
 
-monochrome = fadeIn white
+monochrome' = constant (opaque white)
+monochrome = Grad { runGrad = (runGrad(monochrome') . getSum) }
 
 --gradientByName :: String -> Maybe(Gradient Double AlphaColour Double)
 gradientByName "warm" = Just warm
@@ -109,12 +122,13 @@ gradientByName _ = Nothing
 --                 -> GradientSpec -> Gradient m Colour Double 
 gradientFromSpec def bg gSpec = opacify bg $ fromExpr gSpec ?? def
                             
---fromExpr :: GradientSpec -> Maybe (Gradient Double AlphaColour Double)
+--fromExpr :: GradientSpec -> Maybe (Gradient m f a)
 fromExpr (NamedGradient g) = gradientByName g
-fromExpr (Split gns g) = splitGrads gns g
+fromExpr (Split gns) = splitGrads gns
 fromExpr (Combine f xs) = combineGrads (getBlendFunc f) =<< mapM fromExpr xs
-fromExpr (Transform f g) = getTransFunc f <$> fromExpr g
-
+--fromExpr (Transform f g) = getTransFunc f <$> fromExpr g
+--fromExpr (Collate cols) = Just $ collate cols
+fromExpr _ = Nothing
 
 -- combineGrads :: (Gradient AlphaColour a -> Gradient AlphaColour a -> Gradient AlphaColour a) 
 --             -> [Gradient AlphaColour a] -> Maybe (Gradient AlphaColour a)
@@ -122,8 +136,8 @@ combineGrads f [] = Nothing
 combineGrads f [x] = Just x
 combineGrads f (x:xs) = Just $ foldl f x xs
 
-splitGrads [] g = fromExpr g
-splitGrads ((g1, n1):gns) g = adjacent n1 transparent <$> g1' <*> splitGrads gns g
+splitGrads [] = Just $ constant mempty
+splitGrads ((g1, n1):gns) = adjacent n1 <$> g1' <*> splitGrads gns
   where g1' = fromExpr g1
 
 -- getBlendFunc :: BlendFunction -> Gradient AlphaColour Double 
@@ -131,9 +145,10 @@ splitGrads ((g1, n1):gns) g = adjacent n1 transparent <$> g1' <*> splitGrads gns
 getBlendFunc Blend = blend 0.5
 getBlendFunc Overlay = (<>)
 
-getTransFunc Invert = invert
-getTransFunc (Exponent n) = onInput (** n)
-getTransFunc Reverse = onInput (1 -)
+--getTransFunc :: (Monoid m, Monoid n) => (m -> n) 
+--getTransFunc Invert = invert
+--getTransFunc (Exponent n) = onInput (** n)
+--getTransFunc Reverse = onInput (1 -)
 
 --------------------------------------------------------------------------------
 --Converting polynomials to values to be able to apply gradients.

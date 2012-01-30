@@ -115,30 +115,30 @@ mkRootPlot f (RootPlot p r) = (pair mkCd2 r, f p r)
 mkIFSPlot :: (Polynomial cf -> Root -> v) -> IFSPlot cf -> (InpCoord, v)
 mkIFSPlot f (IFSPlot c) = (pair mkCd2 c, f [] c)
 
-handleOptions :: Monoid m => IO(Configuration m)
+handleOptions :: Monoid m => IO(Configuration m c)
 handleOptions = do
     args <- getArgs
     getConfig args
 
-getConfig :: Monoid m => [String] -> IO(Configuration m)
+getConfig :: Monoid m => [String] -> IO(Configuration m c)
 --getConfig [] = loadConfigFile "roots.config"
 --getConfig (arg:_) = loadConfigFile arg
 getConfig _ = loadConfigFile "roots.config"
 
-loadConfigFile :: Monoid m => String -> IO(Configuration m)
+loadConfigFile :: Monoid m => String -> IO(Configuration m c)
 loadConfigFile fn = do res <- parseConfig fn =<< readFile fn
                        case res of 
                            Left err -> do putStrLn "Error loading config file:"
                                           error err
                            Right cfg -> return cfg
 
-mkConfig :: (Monoid m, m ~ Sum Double) => Configuration m -> IO() 
+mkConfig :: (Monoid m, m ~ Sum Double) => Configuration m c -> IO() 
 mkConfig c = case get runMode c of WithGUI -> runAsGui cfg
                                    ImageFile -> runAsCmd cfg
   where cfg = configForRender . head $ get renders c
 
 --TODO: make this return different gradients (using different monoids).
-configForRender :: (Monoid m, m ~ Sum Double) => Render m -> (Mode, Config m Int)
+configForRender :: (Monoid m, m ~ Sum Double) => Render m c -> (Mode, Config m Int)
 configForRender r = (mode, cfg)
   where (mode, dg) = case get renderMode r of
                          C.Roots d -> (Roots, d)
@@ -146,7 +146,7 @@ configForRender r = (mode, cfg)
         cfg = Config [-1, 1] (toTuple $ get C.outputSize r) dg
                      (coordToComplex $ get renderCenter r)
                      (fst $ get renderSize r)
-                     ( Grad { runGrad = (runGrad(g) . getSum ) } ) 
+                     g 
         g = gradientFromSpec monochrome black (get gradSpec r) --testing!!
                       
 main :: IO()

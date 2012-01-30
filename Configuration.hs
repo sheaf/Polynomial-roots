@@ -27,29 +27,28 @@ data AspectCorrection = None | Clip | Expand
 data BlendFunction = Blend | Overlay
     deriving (Eq, Ord, Read, Show, Enum, Bounded)
 
-data TransFunc = Invert | Exponent Double | Reverse
+type TransFunc m n = m -> n
+
+data GradientSpec m c = NamedGradient String
+                      | Split [(GradientSpec m c, m)]
+                      | Combine BlendFunction [GradientSpec m c]
+                      -- | Transform (TransFunc n m) (GradientSpec n c)
+                      | Collate [(c, m)]
     deriving (Eq, Ord, Read, Show)
 
-
-data GradientSpec = NamedGradient String
-                   | Split [(GradientSpec, Double)] GradientSpec
-                   | Combine BlendFunction [GradientSpec]
-                   | Transform TransFunc GradientSpec
-    deriving (Eq, Ord, Read, Show)
-
-data Render m = Render { _renderSpec :: RenderSpec
-                     , _outputFile :: Maybe String
-                     , _outputSize :: Cd2 Int
-                     , _fixAspect  :: AspectCorrection
-                     , _gradSpec   :: GradientSpec
-                     } deriving (Eq, Ord, Read, Show)
+data Render m c = Render { _renderSpec :: RenderSpec
+                         , _outputFile :: Maybe String
+                         , _outputSize :: Cd2 Int
+                         , _fixAspect  :: AspectCorrection
+                         , _gradSpec   :: GradientSpec m c
+                         } deriving (Eq, Ord, Read, Show)
 
 data RunMode = ImageFile | WithGUI 
     deriving (Eq, Ord, Read, Show, Enum, Bounded)
 
-data Configuration m = Cfg { _runMode :: RunMode
-                           , _renders :: [Render m]
-                           } deriving (Eq, Ord, Read, Show)
+data Configuration m c = Cfg { _runMode :: RunMode
+                             , _renders :: [Render m c]
+                             } deriving (Eq, Ord, Read, Show)
 
 $(mkLabels [''RenderSpec, ''Render, ''Configuration])
 

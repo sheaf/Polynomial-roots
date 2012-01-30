@@ -49,6 +49,7 @@ type Resolution = (Int,Int)
 type Center = Complex Double
 type Width = Double
 type Pixel = (Int,Int)
+--Gradient as a monoid homomorphism into colour space.
 newtype Gradient m clr a = Grad { runGrad :: m -> clr a }
 data Mode = Roots | IFS | Both deriving (Eq, Ord, Read, Show)
 data Config m a = Config { coefficients :: IterCoeffs a
