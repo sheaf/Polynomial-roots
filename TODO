@@ -26,4 +26,5 @@ Incorporate alternative colouring for both roots/ifs.
 
 Plotting:
 
-Fix cheating IFS using possible bounds.
+Fix cheating IFS using possible bounds; + unify noncheating/cheating versions.
+Fix scale factors: scaling depending on the point instead of global factors.
