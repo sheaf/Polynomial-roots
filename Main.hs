@@ -102,12 +102,14 @@ getPlot Roots cfg k = --(k :: [RootPlot a] -> IO (IOArrayRaster (Sum Double) (Ro
     mkRasterizer (mkRootPlot density) (rbCfg cfg) (ibCfg cfg)
 getPlot IFS cfg k = --(k :: [IFSPlot a] -> IO (IOArrayRaster (Sum Double) (IFSPlot a) (Sum Double)) -> r) = 
     k (ifsPoints cfg) $ 
-    mkRasterizer (mkIFSPlot density) (rbCfg cfg) (ibCfg cfg)
+    mkRasterizer (mkIFSPlot density) (rbCfg cfg) (ibCfg' cfg)
 getPlot _ _ _ = error "TODO -- handle getPlot cases"
 
 rbCfg (Config _ (rx,ry) _ _ _ _) = (mkCd2 0 0, mkCd2 rx ry)
 ibCfg (Config _ _ _ c w _) = (pair mkCd2 (c - wC), pair mkCd2 (c + wC))
-  where wC = (w/2) :+ (w/2)
+    where wC = (w/2) :+ (w/2)
+ibCfg' (Config _ _ _ c w _) = (pair mkCd2 (0 - wC), pair mkCd2 (0 + wC))
+    where wC = (w/2) :+ (w/2)
 
 mkRootPlot :: (Polynomial cf -> Root -> v) -> RootPlot cf -> (InpCoord, v)
 mkRootPlot f (RootPlot p r) = (pair mkCd2 r, f p r)
