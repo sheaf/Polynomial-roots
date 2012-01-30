@@ -49,8 +49,8 @@ linear a1 a2 c1 c2 = Grad (\n -> case (n<a1', n>a2') of
                           )                                   -- invert arguments of blend!!
     where (a1',a2') = (min a1 a2, max a1 a2)
 
-onInput :: (m -> m) -> Gradient m f a -> Gradient m f a
-onInput f = Grad . (. f) . runGrad
+onInput :: (m -> n) -> Gradient n f a -> Gradient m f a
+onInput f g = Grad { runGrad =  (runGrad g) . f }
 
 onOutput :: (f a -> g a) -> Gradient m f a -> Gradient m g a
 onOutput f = Grad . (f .) . runGrad
@@ -92,12 +92,12 @@ opacify bg = onOutput (`over` bg)
 fadeIn c = linear (opaque c) transparent
 fadeOut c = linear transparent (opaque c)
 
-warm', cold', sunset' :: Gradient Double AlphaColour Double
+warm', cold', sunset' :: (Ord a, Floating a) => Gradient a AlphaColour a
 warm' = collate [(opaque black,0),(opaque red,1/3),(opaque yellow,2/3),(opaque white,1)]
 cold' = collate [(opaque black,0),(opaque blue,1/3),(opaque cyan,2/3),(opaque white,1)]
 sunset' = collate [(opaque black,0),(opaque purple, 1/5), (opaque firebrick, 2/5), (opaque goldenrod, 1/2), (opaque orange, 3/5), (opaque white, 1)]
 
-warm, cold, sunset :: Gradient (Sum Double) AlphaColour Double
+warm, cold, sunset :: (Ord a, Floating a) => Gradient (Sum a) AlphaColour a
 warm = Grad { runGrad = (runGrad(warm') . getSum ) }
 cold = Grad { runGrad = (runGrad(cold') . getSum ) }
 sunset = Grad { runGrad = (runGrad(sunset') . getSum ) }
@@ -121,13 +121,13 @@ gradientByName _ = Nothing
 --gradientFromSpec :: Gradient m AlphaColour Double -> Colour Double 
 --                 -> GradientSpec -> Gradient m Colour Double 
 gradientFromSpec def bg gSpec = opacify bg $ fromExpr gSpec ?? def
-                            
---fromExpr :: GradientSpec -> Maybe (Gradient m f a)
+
 fromExpr (NamedGradient g) = gradientByName g
 fromExpr (Split gns) = splitGrads gns
 fromExpr (Combine f xs) = combineGrads (getBlendFunc f) =<< mapM fromExpr xs
 --fromExpr (Transform f g) = getTransFunc f <$> fromExpr g
---fromExpr (Collate cols) = Just $ collate cols
+fromExpr (Collate cols) = Just $ (onInput getSum) (collate cols')
+    where cols' = (\(a,b) -> (a, getSum b)) <$> cols
 fromExpr _ = Nothing
 
 -- combineGrads :: (Gradient AlphaColour a -> Gradient AlphaColour a -> Gradient AlphaColour a) 

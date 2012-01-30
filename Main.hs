@@ -132,13 +132,13 @@ loadConfigFile fn = do res <- parseConfig fn =<< readFile fn
                                           error err
                            Right cfg -> return cfg
 
-mkConfig :: (Monoid m, m ~ Sum Double) => Configuration m c -> IO() 
+mkConfig :: (c ~ RGBAColour, Monoid m, m ~ Sum Double) => Configuration m c -> IO() 
 mkConfig c = case get runMode c of WithGUI -> runAsGui cfg
                                    ImageFile -> runAsCmd cfg
   where cfg = configForRender . head $ get renders c
 
 --TODO: make this return different gradients (using different monoids).
-configForRender :: (Monoid m, m ~ Sum Double) => Render m c -> (Mode, Config m Int)
+configForRender :: (c ~ RGBAColour, Monoid m, m ~ Sum Double) => Render m c -> (Mode, Config m Int)
 configForRender r = (mode, cfg)
   where (mode, dg) = case get renderMode r of
                          C.Roots d -> (Roots, d)

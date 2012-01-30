@@ -1,0 +1,29 @@
+TODO:
+
+
+Computation:
+
+Allow complex coefficients (not supported by polySolve).
+Optimise (better bounds, etc).
+
+
+Parsing:
+
+Error if no config file found.
+Explain config file specification.
+Make sure parsing works properly (as of now, can fail with no error message,
+    e.g. output-size being given a single argument).
+Proper parsing of all input (e.g. negative numbers...).
+Allow different coefficient sets (and different types, i.e. Int/Double/...).
+Allow parsing of gradients (with different methods).
+
+
+Gradients:
+
+Allow height parameters.
+Incorporate alternative colouring for both roots/ifs.
+
+
+Plotting:
+
+Fix cheating IFS using possible bounds.
