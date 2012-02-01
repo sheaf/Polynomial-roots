@@ -50,7 +50,7 @@ linear a1 a2 c1 c2 = Grad (\n -> case (n<a1', n>a2') of
     where (a1',a2') = (min a1 a2, max a1 a2)
 
 onInput :: (m -> n) -> Gradient n f a -> Gradient m f a
-onInput f g = Grad { runGrad =  (runGrad g) . f }
+onInput f g = Grad { runGrad =  runGrad g . f }
 
 onOutput :: (f a -> g a) -> Gradient m f a -> Gradient m g a
 onOutput f = Grad . (f .) . runGrad
@@ -61,11 +61,11 @@ square = onInput (^ 2)
 squareRoot = onInput sqrt
 
 adjacent :: Ord m => m -> Gradient m f a -> Gradient m f a -> Gradient m f a
-adjacent x g1 g2 = Grad (\n -> runGrad (if n < x then g1 else g2) $ n)
+adjacent x g1 g2 = Grad (\n -> runGrad (if n < x then g1 else g2) n)
 
 --Takes a list of colours and control points, giving the corresponding gradient.
 collate :: (Monoid (f a), Ord a, Fractional a, AffineSpace f) => [(f a, a)] -> Gradient a f a
-collate cvs1 = Grad $ (blender cvs')
+collate cvs1 = Grad $ blender cvs'
     where cvs2 = sortBy (comparing snd) cvs1
           cvs3 = filter (\(_,b) -> (b >= 0 && b <= 1)) cvs2
           cvs' = case (head cvs3, last cvs3) of
@@ -95,15 +95,15 @@ cold' = collate [(opaque black,0),(opaque blue,1/3),(opaque cyan,2/3),(opaque wh
 sunset' = collate [(opaque black,0),(opaque purple, 1/5), (opaque firebrick, 2/5), (opaque goldenrod, 1/2), (opaque orange, 3/5), (opaque white, 1)]
 
 warm, cold, sunset :: (Ord a, Floating a) => Gradient (Sum a) AlphaColour a
-warm = Grad { runGrad = (runGrad(warm') . getSum ) }
-cold = Grad { runGrad = (runGrad(cold') . getSum ) }
-sunset = Grad { runGrad = (runGrad(sunset') . getSum ) }
+warm = Grad { runGrad = runGrad warm' . getSum }
+cold = Grad { runGrad = runGrad cold' . getSum }
+sunset = Grad { runGrad = runGrad sunset' . getSum }
 
-sourceGradient :: Gradient (SourceSum) AlphaColour Double
-sourceGradient = Grad $ (\(Source (r,g,b,a)) -> rgba r g b a)
+sourceGradient :: Gradient SourceSum AlphaColour Double
+sourceGradient = Grad (\(Source (r,g,b,a)) -> rgba r g b a)
 
 monochrome' = constant (opaque white)
-monochrome = Grad { runGrad = (runGrad(monochrome') . getSum) }
+monochrome = Grad { runGrad = runGrad monochrome' . getSum }
 
 --gradientByName :: String -> Maybe(Gradient Double AlphaColour Double)
 gradientByName "warm" = Just warm
@@ -124,7 +124,7 @@ fromExpr (Split gns) = splitGrads gns
 fromExpr (Combine f xs) = combineGrads (getBlendFunc f) =<< mapM fromExpr xs
 --fromExpr (Transform f g) = getTransFunc f <$> fromExpr g
 fromExpr (Collate cols) = Just $ (onInput getSum) (collate cols')
-    where cols' = (\(a,b) -> (a, getSum b)) <$> cols
+    where cols' = second getSum <$> cols
 
 -- combineGrads :: (Gradient AlphaColour a -> Gradient AlphaColour a -> Gradient AlphaColour a) 
 --             -> [Gradient AlphaColour a] -> Maybe (Gradient AlphaColour a)
@@ -171,5 +171,5 @@ toGValue1 cfs p = z * evaluate p' z
 --This uses the scale factors.
 toGValue2 :: (Coefficient a) => IterCoeffs a ->  Polynomial a -> Center -> Double
 toGValue2 cfs p c = 0.5 + 1/(2*pi) * phase scale
-    where scale = (negate . recip . (`evaluate` c)) $ derivative $ (map toComplex) $ p
+    where scale = (negate . recip . (`evaluate` c)) $ derivative $ map toComplex p
 
