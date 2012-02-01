@@ -129,7 +129,6 @@ fromExpr (Combine f xs) = combineGrads (getBlendFunc f) =<< mapM fromExpr xs
 --fromExpr (Transform f g) = getTransFunc f <$> fromExpr g
 fromExpr (Collate cols) = Just $ (onInput getSum) (collate cols')
     where cols' = (\(a,b) -> (a, getSum b)) <$> cols
-fromExpr _ = Nothing
 
 -- combineGrads :: (Gradient AlphaColour a -> Gradient AlphaColour a -> Gradient AlphaColour a) 
 --             -> [Gradient AlphaColour a] -> Maybe (Gradient AlphaColour a)
