@@ -33,6 +33,16 @@ instance Coefficient (Complex Double) where
 type Polynomial a = [a]
 type IterCoeffs a = [a]
 
+{-
+instance Num Polynomial a where
+    a (+) b = zipWith (+) a b
+	negate p = map negate p
+	(a:as) * (b:bs) = [a*b] + (0 : map (a*) bs) + (0: map (*b) as) + (0 : 0 : (as*bs))
+    _ * _ = []
+	fromInteger n = [fromInteger n]
+    abs _ = error "No abs definition for Polynomial"
+    signum _ = error "No signum definition for Polynomial"-}
+
 --Root finding types.
 type RealBound = Degree -> Double
 type Point = Complex Double

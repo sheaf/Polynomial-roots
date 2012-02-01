@@ -5,9 +5,13 @@ import Prelude ()
 import Types
 import Trees
 import Data.Tree(flatten)
+import Data.Maybe
 import Interval
 import Plotting
 import Numeric.GSL.Polynomials(polySolve)
+import Numeric.LinearAlgebra.LAPACK(eigOnlyC)
+import qualified Data.Packed.Matrix as M
+import qualified Data.Packed.Vector as V
 
 --------------------------------------------------------------------------------
 --Bound used for pruning trees of polynomials.
@@ -33,12 +37,31 @@ canHaveRoots :: (Coefficient a) =>
 canHaveRoots cfs d cI = concatMap flatten $ constructPolyForest d cfs (bound cfs cI) cI
 
 --------------------------------------------------------------------------------
---Root finding: GSL library.
-findRoots :: Polynomial Double -> [Root]
-findRoots p
+--Root finding: GSL library. Currently not used.
+findRoots' :: Polynomial Double -> [Root]
+findRoots' p
     | length p' <= 1 = []
     | otherwise = polySolve p'
         where p' = reverse . dropWhile (==0) . reverse $ p
+
+--Alternative using LAPACK.
+findRoots :: Coefficient a => Polynomial a -> [Root]
+findRoots p
+    | length p' <= 1 = []
+    | otherwise = V.toList $ eigOnlyC (companion p')
+        where p'' = map toComplex $ reverse . dropWhile (==0) . reverse $ p
+              lead = fromJust $ last p''
+              p' = map (/lead) p''
+
+--Gives the companion matrix of the given input polynomial, assumed monic.
+companion :: Coefficient a =>  Polynomial a -> M.Matrix (Complex Double)
+companion p = M.fromColumns vcols
+    where n = (length p)-1
+          p' = map negate $ take n p
+          zs = replicate (n-1) 0 ++ [1]
+          shift m l = take n . drop m $ fromJust $ cycle l
+          cols = (map (\k -> shift k zs) $ reverse [0..(n-2)]) ++ [p']
+          vcols = map V.fromList $ map (map toComplex) cols
 
 --------------------------------------------------------------------------------
 --Plotting sets of roots.
@@ -61,13 +84,13 @@ colourFunction' polys (Config _ (rx,ry) w c (grad,_)) (px,py) = col
           col = grad (length roots)
 -}
 
-getPolys :: (Real a, Coefficient a) => Config m a -> [Polynomial a]
+getPolys :: (Coefficient a) => Config m a -> [Polynomial a]
 getPolys (Config ic (rx, ry) d c w _) = canHaveRoots ic d cI
   where h = w * fromIntegral ry / fromIntegral rx
         cI = c +! ((-w/2) :+ (-h/2), (w/2) :+ (h/2))
 
-polyRoots :: (Real a, Coefficient a) => [Polynomial a] -> [RootPlot a]
-polyRoots polys = (\p -> map (RootPlot p) . findRoots $ map realToFrac p) =<< polys
+polyRoots :: (Coefficient a) => [Polynomial a] -> [RootPlot a]
+polyRoots polys = (\p -> map (RootPlot p) . findRoots $ p) =<< polys
 
-getRoots :: (Real a, Coefficient a) => Config m a -> [RootPlot a]
+getRoots :: (Coefficient a) => Config m a -> [RootPlot a]
 getRoots cfg = polyRoots $ getPolys cfg
