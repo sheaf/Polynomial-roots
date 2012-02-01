@@ -3,14 +3,14 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Rendering.Gradient where
 
-import Control.Arrow
-import Control.Applicative
+import Overture
+import Prelude ()
 import Data.Colour.Names
-import Data.List
+import Data.Maybe
 import Data.Monoid
 import Rendering.Colour
+import Data.List(lookup)
 import Types
-import Util
 
 --Useful monoid amenable to colouring (for source colouring especially).
 --Think: (R,G,B,Opacity).
@@ -69,18 +69,19 @@ collate cvs1 = Grad $ (blender cvs')
     where cvs2 = sortBy (\a b -> compare (snd a) (snd b)) cvs1
           cvs3 = filter (\(_,b) -> (b >= 0 && b <= 1)) cvs2
           cvs' = case (head cvs3, last cvs3) of
-                      ((_,0),(_,1)) -> cvs3
-                      ((_,0),(b,_)) -> cvs3 ++ [(b,1)]
-                      ((a,_),(_,1)) -> [(a,0)] ++ cvs3
-                      ((a,_),(b,_)) -> [(a,0)] ++ cvs3 ++ [(b,1)]
+                      (Just (_,0),Just (_,1)) -> cvs3
+                      (Just (_,0),Just (b,_)) -> cvs3 ++ [(b,1)]
+                      (Just (a,_),Just (_,1)) -> [(a,0)] ++ cvs3
+                      (Just (a,_),Just (b,_)) -> [(a,0)] ++ cvs3 ++ [(b,1)]
+                      _ -> error "could not collate, too few control points..."
           blender cvs n = blend n' c2 c1 -- arguments inverted again!!
               where n2 = min 1 . max 0 $ n
                     (c1,a1) = case (filter (\(a,b) -> b == n2) cvs) of
-                                   [] -> last (filter (\(a,b) -> b < n2) cvs)
-                                   ls -> head ls
+                                   [] -> fromJust $ last (filter (\(a,b) -> b < n2) cvs)
+                                   ls -> fromJust $ head ls
                     (c2,a2) = case (filter (\(a,b) -> b == n2) cvs) of
-                                   [] -> head (filter (\(a,b) -> b > n2) cvs)
-                                   ls -> last ls
+                                   [] -> fromJust $ head (filter (\(a,b) -> b > n2) cvs)
+                                   ls -> fromJust $ last ls
                     n' = if a1==a2 then n2 else (n2-a1)/(a2-a1)
 
 asHue :: Gradient Double AlphaColour Double
@@ -143,7 +144,7 @@ splitGrads ((g1, n1):gns) = adjacent n1 <$> g1' <*> splitGrads gns
 -- getBlendFunc :: BlendFunction -> Gradient AlphaColour Double 
 --              -> Gradient AlphaColour Double -> Gradient AlphaColour Double
 getBlendFunc Blend = blend 0.5
-getBlendFunc Overlay = (<>)
+getBlendFunc Overlay = (++)
 
 --getTransFunc :: (Monoid m, Monoid n) => (m -> n) 
 --getTransFunc Invert = invert

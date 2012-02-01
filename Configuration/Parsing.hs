@@ -3,12 +3,14 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
 module Configuration.Parsing where
 
+import Overture hiding (between, (<|>), many)
+import Prelude ()
 import Data.Char
+import Data.Maybe
 import Text.Parsec
 import Text.Parsec.Char
 import Text.Parsec.Combinator
 import Configuration
-import Util
 import Rendering.Coord hiding (elem)
 import Debug.Trace
 
@@ -144,12 +146,12 @@ unQName = do n <- rawNameToken
 rawNameToken = ((:) <$> letter <*> many nameChar)
 
 intVal :: (Monad m) => ParsecT String u m Int
-intVal = read <$> many digit
+intVal = fromJust . read <$> many digit
 
 doubleVal :: (Monad m) => ParsecT String u m Double
 doubleVal = do ds1 <- many1 digit
                ds2 <- option [] (char '.' *> (('.':) <$> many1 digit))
-               return (read $ ds1 ++ ds2)
+               return (fromJust . read $ ds1 ++ ds2)
 
 
 insensitiveString :: (Monad m) => String -> ParsecT String u m String

@@ -27,3 +27,4 @@ Executable polynomial-roots
                      transformers >= 0.2,
                      directory >= 1.1,
                      containers >= 0.4
+                     overture >= 0.3

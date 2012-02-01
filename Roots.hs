@@ -1,5 +1,7 @@
 module Roots where
 
+import Overture
+import Prelude ()
 import Types
 import Trees
 import Data.Tree(flatten)

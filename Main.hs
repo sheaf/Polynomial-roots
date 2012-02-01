@@ -10,6 +10,8 @@ using tree pruning.-}
 
 module Main where
 
+import Overture hiding(fst,snd)
+import Prelude ()
 import Control.Exception(IOException,handle)
 import System.Environment(getArgs)
 import System.IO
@@ -19,7 +21,6 @@ import Data.Maybe
 import Data.Monoid
 import Roots
 import IFS
-import Util
 import Types
 import Plotting
 import Image
@@ -36,7 +37,6 @@ import Rendering.ArrayRaster
 import Rendering.Coord
 import qualified Configuration as C
 import qualified Types as T
-import Prelude hiding (fst, snd)
 
 ifsRoutine :: (Real a, Coefficient a, Monoid m, m ~ Sum Double) => Config m a -> IO ()
 ifsRoutine cfg = do
@@ -137,7 +137,10 @@ loadConfigFile fn = do res <- parseConfig fn =<< readFile fn
 mkConfig :: (c ~ RGBAColour, Monoid m, m ~ Sum Double) => Configuration m c -> IO() 
 mkConfig c = case get runMode c of WithGUI -> runAsGui cfg
                                    ImageFile -> runAsCmd cfg
-  where cfg = configForRender . head $ get renders c
+  where cfg = configForRender rdr
+        rdr = case head $ get renders c of
+                   Just rdr' -> rdr'
+                   Nothing   -> error "empty list of renders..."
 
 --TODO: make this return different gradients (using different monoids).
 configForRender :: (c ~ RGBAColour, Monoid m, m ~ Sum Double) => Render m c -> (Mode, Config m Int)

@@ -3,7 +3,8 @@
 {-# LANGUAGE GADTs #-}
 module Rendering.ArrayRaster where 
 
-import Control.Arrow
+import Overture
+import Prelude ()
 import Data.IORef
 import Data.Array.MArray
 import Data.Array.IO
@@ -13,7 +14,6 @@ import Rendering.Coord
 import Pair
 import Interval
 import Types hiding (Config(..))
-import Util
 
 data IOArrayRaster val inp out where
     IOArrayRaster :: (Monoid v, MArray IOArray v IO) 
@@ -32,7 +32,7 @@ instance Rasterizer IOArrayRaster where
     rasterize (IOArrayRaster f g rbs ibs n ar) i | validPoint = Just <$> updArray 
                                                  | otherwise  = return Nothing
       where updArray = do v <- readArray ar xy
-                          let v' = iv <> v
+                          let v' = iv ++ v
                           writeArray ar xy v'
                           modifyIORef n (+ 1)
                           count <- readIORef n

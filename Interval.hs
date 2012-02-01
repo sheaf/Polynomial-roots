@@ -2,6 +2,8 @@
              FlexibleContexts, FlexibleInstances #-}
 module Interval where
 
+import Overture
+import Prelude ()
 import Types
 import Data.Maybe
 import Control.Applicative

@@ -3,17 +3,17 @@
 
 module Plotting where
 
+import Overture
+import Prelude ()
 import qualified Data.Colour.RGBSpace as RGB
 import qualified Data.Colour.RGBSpace.HSV as HSV
 import Control.Applicative
 import Data.Complex
-import Data.List
 import Data.Monoid
 import Data.Word
 import Rendering.Gradient
 import Types
 import Interval
-import Util
 import Rendering.Colour
 
 data RootPlot a = RootPlot (Polynomial a) Root 
@@ -35,7 +35,7 @@ toCoords roots (rx,ry) c w  = map((\z->(floor(realPart z),ry-floor(imagPart z)))
 
 --Density colouring.                                  
 density :: p -> r -> Sum Double
-density _ _ = Sum 0.1
+density _ _ = Sum 0.001 -- this should be a parameter!
 
 --Colouring by source polynomial, "base n" and "scale factor" methods.
 source1, source2 :: (Coefficient a) => IterCoeffs a -> Polynomial a -> Complex Double -> SourceSum

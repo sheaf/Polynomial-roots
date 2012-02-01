@@ -1,10 +1,11 @@
 {-# LANGUAGE TypeFamilies #-}
 module Image where
 
+import Overture
+import Prelude ()
 import Control.Monad.IO.Class
 import Data.Foldable
 import qualified Graphics.GD.ByteString.Lazy as GD
-import Util
 import Pair
 import Settings
 import Rendering.Colour

@@ -1,6 +1,8 @@
 {-# LANGUAGE TypeFamilies #-}
 module MainGUI where
 
+import Overture hiding (mapM_)
+import Prelude ()
 import Control.Exception (bracket_)
 import Control.Monad.IO.Class
 import GHC.Word
@@ -14,7 +16,6 @@ import Data.Colour
 import Types hiding (Config(..), Gradient, outputSize)
 import Settings hiding (size)
 import qualified Settings as S
-import Util
 import Image
 import Pair
 import GUI.Pixels
@@ -24,6 +25,7 @@ import Rendering.Gradient
 import Rendering.Colour
 import Rendering.Coord
 import Types(Gradient(..))
+import Util
 
 type Time = Word32
 

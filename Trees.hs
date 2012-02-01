@@ -1,5 +1,7 @@
 module Trees where
 
+import Overture
+import Prelude ()
 import Types
 import Interval
 import Data.Tree
@@ -89,7 +91,9 @@ continueForest :: (Coefficient a) =>
                   -> Forest (Polynomial a) -> [(Polynomial a, BForest a)]
 continueForest 0 _ bd cI f = filter (not.null.snd) $ map sPrune $ getLeafForest f
                                  where sPrune (Node p _) = (p', pruneLeaves bd cI p' [Node (c,True) []]) 
-                                        where c = last p
+                                        where c = case last p of
+                                                       Nothing -> error "empty polynomial in forest continuation"
+                                                       Just lp -> lp
                                               p'= (reverse . drop 1 . reverse) p
 continueForest d cfs bd cI f = filter (not.null.snd) $
                                map sNextLevel $

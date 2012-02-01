@@ -1,5 +1,7 @@
 module IFS where
 
+import Overture
+import Prelude ()
 import Types
 import Plotting
 import Interval

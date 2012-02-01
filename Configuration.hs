@@ -3,10 +3,9 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
 module Configuration where
 
-import AltPrelude
+import Overture
 import Prelude ()
 import Data.Label (mkLabels)
-import Util
 import Pair
 import Rendering.Coord hiding (size)
 
