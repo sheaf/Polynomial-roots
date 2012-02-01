@@ -66,7 +66,7 @@ adjacent x g1 g2 = Grad (\n -> runGrad (if n < x then g1 else g2) $ n)
 --Takes a list of colours and control points, giving the corresponding gradient.
 collate :: (Monoid (f a), Ord a, Fractional a, AffineSpace f) => [(f a, a)] -> Gradient a f a
 collate cvs1 = Grad $ (blender cvs')
-    where cvs2 = sortBy (\a b -> compare (snd a) (snd b)) cvs1
+    where cvs2 = sortBy (comparing snd) cvs1
           cvs3 = filter (\(_,b) -> (b >= 0 && b <= 1)) cvs2
           cvs' = case (head cvs3, last cvs3) of
                       (Just (_,0),Just (_,1)) -> cvs3
@@ -76,12 +76,8 @@ collate cvs1 = Grad $ (blender cvs')
                       _ -> error "could not collate, too few control points..."
           blender cvs n = blend n' c2 c1 -- arguments inverted again!!
               where n2 = min 1 . max 0 $ n
-                    (c1,a1) = case (filter (\(a,b) -> b == n2) cvs) of
-                                   [] -> fromJust $ last (filter (\(a,b) -> b < n2) cvs)
-                                   ls -> fromJust $ head ls
-                    (c2,a2) = case (filter (\(a,b) -> b == n2) cvs) of
-                                   [] -> fromJust $ head (filter (\(a,b) -> b > n2) cvs)
-                                   ls -> fromJust $ last ls
+                    (c1,a1) = fromJust $ head $ dropWhile (\(a,b) -> b > n2) (reverse cvs)
+                    (c2,a2) = fromJust $ head $ dropWhile (\(a,b) -> b < n2) cvs 
                     n' = if a1==a2 then n2 else (n2-a1)/(a2-a1)
 
 asHue :: Gradient Double AlphaColour Double
