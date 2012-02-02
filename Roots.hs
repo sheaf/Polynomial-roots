@@ -9,7 +9,8 @@ import Data.Maybe
 import Interval
 import Plotting
 import Numeric.GSL.Polynomials(polySolve)
-import Numeric.LinearAlgebra.LAPACK(eigOnlyC)
+import Numeric.LinearAlgebra.LAPACK(eigOnlyR, eigOnlyC)
+import Foreign.Storable(Storable)
 import qualified Data.Packed.Matrix as M
 import qualified Data.Packed.Vector as V
 
@@ -37,7 +38,9 @@ canHaveRoots :: (Coefficient a) =>
 canHaveRoots cfs d cI = concatMap flatten $ constructPolyForest d cfs (bound cfs cI) cI
 
 --------------------------------------------------------------------------------
---Root finding: GSL library. Currently not used.
+--Root finding.
+
+--Method using GSL library. Currently not used.
 findRoots' :: Polynomial Double -> [Root]
 findRoots' p
     | length p' <= 1 = []
@@ -48,20 +51,23 @@ findRoots' p
 findRoots :: Coefficient a => Polynomial a -> [Root]
 findRoots p
     | length p' <= 1 = []
-    | otherwise = V.toList $ eigOnlyC (companion p')
-        where p'' = map toComplex $ reverse . dropWhile (==0) . reverse $ p
-              lead = fromJust $ last p''
-              p' = map (/lead) p''
+    | isNothing (toReal lead) = V.toList $ eigOnlyC (companion pc)
+    | otherwise = V.toList $ eigOnlyR (companion pr)
+        where p' = reverse . dropWhile (==0) . reverse $ p
+              lead = fromJust $ last p'
+              pr = map ((/(fromJust.toReal $ lead)).(fromJust.toReal)) p'
+              pc = map ((/(toComplex lead)).toComplex) p'
 
 --Gives the companion matrix of the given input polynomial, assumed monic.
-companion :: Coefficient a =>  Polynomial a -> M.Matrix (Complex Double)
+companion :: (M.Element a, Storable a, Coefficient a) 
+          => Polynomial a -> M.Matrix a
 companion p = M.fromColumns vcols
     where n = (length p)-1
           p' = map negate $ take n p
           zs = replicate (n-1) 0 ++ [1]
           shift m l = take n . drop m $ fromJust $ cycle l
           cols = (map (\k -> shift k zs) $ reverse [0..(n-2)]) ++ [p']
-          vcols = map V.fromList $ map (map toComplex) cols
+          vcols = map V.fromList cols
 
 --------------------------------------------------------------------------------
 --Plotting sets of roots.

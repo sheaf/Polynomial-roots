@@ -5,6 +5,8 @@ module Types ( module Types
              , module Data.Complex
              ) where
 
+import Overture
+import Prelude ()
 import Data.Complex
 import Rendering.Colour
 import Configuration hiding (center, Roots, IFS)
@@ -18,30 +20,38 @@ import Configuration hiding (center, Roots, IFS)
 class (Num a, Read a) => Coefficient a where
     toComplex :: a -> Complex Double
     toAbs :: a -> Double
+    toReal :: a -> Maybe Double
 
 instance Coefficient Int where 
     toComplex = fromIntegral
-    toAbs = fromIntegral
+    toAbs = abs . fromIntegral
+    toReal = Just <$> fromIntegral
+instance Coefficient Rational where
+    toComplex = fromRational
+    toAbs = abs . fromRational
+    toReal = Just <$> fromRational
 instance Coefficient Double where
     toComplex x = x :+ 0
     toAbs = abs
+    toReal = Just <$> id
 instance Coefficient (Complex Double) where 
     toComplex = id
     toAbs = magnitude
+    toReal = const Nothing
 
 --Polynomials as lists of coefficients.
 type Polynomial a = [a]
 type IterCoeffs a = [a]
+type MyCoeff = Either Int (Complex Double)
 
-{-
-instance Num Polynomial a where
-    a (+) b = zipWith (+) a b
-	negate p = map negate p
-	(a:as) * (b:bs) = [a*b] + (0 : map (a*) bs) + (0: map (*b) as) + (0 : 0 : (as*bs))
+instance (Coefficient a) => Num (Polynomial a) where
+    a + b = zipWith (+) a b
+    negate p = map negate p
+    (a:as) * (b:bs) = [a*b] + (0 : map (a*) bs) + (0: map (*b) as) + (0 : 0 : (as*bs))
     _ * _ = []
-	fromInteger n = [fromInteger n]
-    abs _ = error "No abs definition for Polynomial"
-    signum _ = error "No signum definition for Polynomial"-}
+    fromInteger n = [fromInteger n]
+    abs p = map abs p
+    signum _ = error "No signum definition for Polynomial"
 
 --Root finding types.
 type RealBound = Degree -> Double
