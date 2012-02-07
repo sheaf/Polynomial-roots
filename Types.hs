@@ -17,7 +17,7 @@ import Configuration hiding (center, Roots, IFS)
 --Polynomials. Constant coefficient is the 0th term.
 --Have to be able to coerce coefficients into the complex numbers,
 --for polynomial evaluation.
-class (Num a, Read a) => Coefficient a where
+class (Eq a, Num a, Show a, Read a) => Coefficient a where
     toComplex :: a -> Complex Double
     toAbs :: a -> Double
     toReal :: a -> Maybe Double
@@ -42,7 +42,6 @@ instance Coefficient (Complex Double) where
 --Polynomials as lists of coefficients.
 type Polynomial a = [a]
 type IterCoeffs a = [a]
-type MyCoeff = Either Int (Complex Double)
 
 instance (Coefficient a) => Num (Polynomial a) where
     a + b = zipWith (+) a b
@@ -60,9 +59,10 @@ type Guess = Complex Double
 type Root = Complex Double
 type Iterations = Int
 type ErrorBound = Double
+type StartVals = [Point]
 
 --Iterated function systems.
-type IFS = (Point -> [Point], [Point]) --second coordinate is starting values
+type IFS = (Point -> [Point], StartVals)
     
 --Plotting datatypes, and options.
 type Resolution = (Int,Int)
@@ -79,7 +79,7 @@ data Config m a = Config { coefficients :: IterCoeffs a
                          , degree       :: Degree
                          , center       :: Center
                          , width        :: Width
-                         , cgradient    :: Gradient m Colour Double
+                         , gradient     :: Gradient m Colour Double
                          }
 
 --------------------------------------------------------------------------------

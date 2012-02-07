@@ -1,5 +1,6 @@
 *.png
 *.p_o
+*.p_hi
 *.o
 *.hi
 *.ini

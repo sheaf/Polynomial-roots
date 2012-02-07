@@ -64,10 +64,15 @@ companion :: (M.Element a, Storable a, Coefficient a)
 companion p = M.fromColumns vcols
     where n = (length p)-1
           p' = map negate $ take n p
-          zs = replicate (n-1) 0 ++ [1]
-          shift m l = take n . drop m $ fromJust $ cycle l
-          cols = (map (\k -> shift k zs) $ reverse [0..(n-2)]) ++ [p']
+          cols = companion' n ++ [p']
           vcols = map V.fromList cols
+
+--Companion matrix missing the last column
+companion' :: Num a => Int -> [[a]]
+companion' 1 = [[]]
+companion' 2 = [[0,1]]
+companion' n = nxt $ companion' (n-1)
+    where nxt (l:ls) = (l ++ [0]) : (map (0:) (l:ls))
 
 --------------------------------------------------------------------------------
 --Plotting sets of roots.

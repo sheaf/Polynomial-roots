@@ -40,7 +40,7 @@ import qualified Types as T
 
 ifsRoutine :: (Real a, Coefficient a, Monoid m, m ~ Sum Double) => Config m a -> IO ()
 ifsRoutine cfg = do
-    let g = cgradient cfg
+    let g = gradient cfg
     putStrLn ""
     putStrLn "IFS routine."
     putStrLn "Computing scale factors... (experimental)"
@@ -53,7 +53,7 @@ ifsRoutine cfg = do
 
 rootsRoutine :: (Real a, Coefficient a, Monoid m, m ~ Sum Double) => Config m a -> IO ()
 rootsRoutine cfg = do
-    let g = cgradient cfg
+    let g = gradient cfg
     putStrLn ""
     putStrLn "Roots routine."
     putStrLn "Computing roots."
@@ -82,7 +82,7 @@ runAsGui (mode, cfg) = do
     putStrLn ""
     showConfig cfg
     putStrLn "    Starting GUI..."
-    getPlot mode cfg (runGuiMain (cfgToSettings cfg) (cgradient cfg))
+    getPlot mode cfg (runGuiMain (cfgToSettings cfg) (gradient cfg))
 
 runGuiMain s g xs r = do rst <- r
                          runEnvT (guiMain xs rst g) s

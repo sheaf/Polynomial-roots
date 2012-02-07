@@ -26,5 +26,6 @@ Executable polynomial-roots
                      mtl >= 2.0,
                      transformers >= 0.2,
                      directory >= 1.1,
-                     containers >= 0.4
-                     overture >= 0.3
+                     containers >= 0.4,
+                     Overture >= 0.3,
+                     parsec >= 3

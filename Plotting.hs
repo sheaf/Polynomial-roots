@@ -35,7 +35,7 @@ toCoords roots (rx,ry) c w  = map((\z->(floor(realPart z),ry-floor(imagPart z)))
 
 --Density colouring.                                  
 density :: p -> r -> Sum Double
-density _ _ = Sum 0.001 -- this should be a parameter!
+density _ _ = Sum 0.008 -- this should be a parameter!
 
 --Colouring by source polynomial, "base n" and "scale factor" methods.
 source1, source2 :: (Coefficient a) => IterCoeffs a -> Polynomial a -> Complex Double -> SourceSum
