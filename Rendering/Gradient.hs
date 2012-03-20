@@ -89,21 +89,13 @@ opacify bg = onOutput (`over` bg)
 fadeIn c = linear (opaque c) transparent
 fadeOut c = linear transparent (opaque c)
 
-warm', cold', sunset' :: (Ord a, Floating a) => Gradient a AlphaColour a
-warm' = collate [(opaque black,0),(opaque red,1/3),(opaque yellow,2/3),(opaque white,1)]
-cold' = collate [(opaque black,0),(opaque blue,1/3),(opaque cyan,2/3),(opaque white,1)]
-sunset' = collate [(opaque black,0),(opaque purple, 1/5), (opaque firebrick, 2/5), (opaque goldenrod, 1/2), (opaque orange, 3/5), (opaque white, 1)]
-
-warm, cold, sunset :: (Ord a, Floating a) => Gradient (Sum a) AlphaColour a
-warm = Grad { runGrad = runGrad warm' . getSum }
-cold = Grad { runGrad = runGrad cold' . getSum }
-sunset = Grad { runGrad = runGrad sunset' . getSum }
-
-sourceGradient :: Gradient SourceSum AlphaColour Double
-sourceGradient = Grad (\(Source (r,g,b,a)) -> rgba r g b a)
+warm, cold, sunset :: (Ord a, Floating a) => Gradient a AlphaColour a
+warm = collate [(opaque black,0),(opaque red,1/3),(opaque yellow,2/3),(opaque white,1)]
+cold = collate [(opaque black,0),(opaque blue,1/3),(opaque cyan,2/3),(opaque white,1)]
+sunset = collate [(opaque black,0),(opaque purple, 1/5), (opaque firebrick, 2/5), (opaque goldenrod, 1/2), (opaque orange, 3/5), (opaque white, 1)]
 
 monochrome' = constant (opaque white)
-monochrome = Grad { runGrad = runGrad monochrome' . getSum }
+monochrome = Grad { runGrad = runGrad monochrome'}
 
 --gradientByName :: String -> Maybe(Gradient Double AlphaColour Double)
 gradientByName "warm" = Just warm
@@ -120,11 +112,11 @@ gradientByName _ = Nothing
 gradientFromSpec def bg gSpec = opacify bg $ fromExpr gSpec ?? def
 
 fromExpr (NamedGradient g) = gradientByName g
-fromExpr (Split gns) = splitGrads gns
-fromExpr (Combine f xs) = combineGrads (getBlendFunc f) =<< mapM fromExpr xs
+--fromExpr (Split gns) = splitGrads gns
+--fromExpr (Combine f xs) = combineGrads (getBlendFunc f) =<< mapM fromExpr xs
 --fromExpr (Transform f g) = getTransFunc f <$> fromExpr g
-fromExpr (Collate cols) = Just $ (onInput getSum) (collate cols')
-    where cols' = second getSum <$> cols
+--fromExpr (Collate cols) = Just $ (onInput getSum) (collate cols')
+--    where cols' = second getSum <$> cols
 
 -- combineGrads :: (Gradient AlphaColour a -> Gradient AlphaColour a -> Gradient AlphaColour a) 
 --             -> [Gradient AlphaColour a] -> Maybe (Gradient AlphaColour a)
@@ -146,6 +138,31 @@ getBlendFunc Overlay = (++)
 --getTransFunc (Exponent n) = onInput (** n)
 --getTransFunc Reverse = onInput (1 -)
 
+
+--Colour scheme definitions.
+instance ColourScheme SourceCol where
+    type ColourData SourceCol = AlphaColour Double
+    type InputData  SourceCol = (Polynomial Int, Complex Double)
+    toColour _         = id
+    toData   ("1",l,o) = uncurry $ source1 l o
+    toData   ("2",l,o) = uncurry $ source2 l o
+    toData   _         = error "wrong method for source colouring"
+
+instance ColourScheme DensityCol where
+    type ColourData DensityCol = (Sum Double)
+    type InputData  DensityCol = (Polynomial Int, Complex Double)
+    toColour (g,_) = runGrad g
+    toData   (_,d) = uncurry $ density d
+
+--Density colouring.                                  
+density :: Double -> p -> r -> Sum Double
+density d _ _ = Sum d
+
+--Colouring by source polynomial, "base n" and "scale factor" methods.
+source1, source2 :: (Coefficient a) => IterCoeffs a -> Double -> Polynomial a -> Complex Double -> (AlphaColour Double)
+source1 cfs o p _ = flip withOpacity o $ hsv (toGValue1 cfs p  ) 1 1
+source2 cfs o p r = flip withOpacity o $ hsv (toGValue2 cfs p r) 1 1
+
 --------------------------------------------------------------------------------
 --Converting polynomials to values to be able to apply gradients.
 
@@ -163,9 +180,9 @@ convertCoeffs cfs dfs (c:cs) = case lookup c cfs' of
 --This is a "base d" expansion.
 toGValue1 :: (Coefficient a) => IterCoeffs a -> Polynomial a -> Double
 toGValue1 cfs p = z * evaluate p' z
-    where d = fromIntegral (length cfs) -1
+    where d  = fromIntegral (length cfs) -1
           p' = convertCoeffs cfs [0..d] p
-          z =  1 / fromIntegral (length cfs)
+          z  = 1 / fromIntegral (length cfs)
 
 --This one should be used with gradients such that g(0)=g(1).
 --This uses the scale factors.

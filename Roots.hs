@@ -51,6 +51,7 @@ findRoots' p
 findRoots :: Coefficient a => Polynomial a -> [Root]
 findRoots p
     | length p' <= 1 = []
+    | length p' == 2 = let [b,a] = p' in [- toComplex b / toComplex a]
     | isNothing (toReal lead) = V.toList $ eigOnlyC (companion pc)
     | otherwise = V.toList $ eigOnlyR (companion pr)
         where p' = reverse . dropWhile (==0) . reverse $ p
@@ -77,10 +78,11 @@ companion' n = nxt $ companion' (n-1)
 --------------------------------------------------------------------------------
 --Plotting sets of roots.
 
-{- Useless, and also outdated code.
+{- Outdated code.
    Evaluates the polynomials at pixel-wide complex intervals,
    and returns how many of the resulting complex intervals contain 0.
    Produces blocky "spread out" versions of the real images.
+   Can be useful to provably eliminate roots occurring in certain regions.
 
 colourFunction' :: (Coefficient a) => 
                    [Polynomial a] -> Config a ->  Pixel -> Colour
@@ -95,7 +97,7 @@ colourFunction' polys (Config _ (rx,ry) w c (grad,_)) (px,py) = col
           col = grad (length roots)
 -}
 
-getPolys :: (Coefficient a) => Config m a -> [Polynomial a]
+getPolys :: (Coefficient a) => Config c a -> [Polynomial a]
 getPolys (Config ic (rx, ry) d c w _) = canHaveRoots ic d cI
   where h = w * fromIntegral ry / fromIntegral rx
         cI = c +! ((-w/2) :+ (-h/2), (w/2) :+ (h/2))
@@ -103,5 +105,5 @@ getPolys (Config ic (rx, ry) d c w _) = canHaveRoots ic d cI
 polyRoots :: (Coefficient a) => [Polynomial a] -> [RootPlot a]
 polyRoots polys = (\p -> map (RootPlot p) . findRoots $ p) =<< polys
 
-getRoots :: (Coefficient a) => Config m a -> [RootPlot a]
+getRoots :: (Coefficient a) => Config c a -> [RootPlot a]
 getRoots cfg = polyRoots $ getPolys cfg

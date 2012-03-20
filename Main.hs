@@ -38,31 +38,31 @@ import Rendering.Coord
 import qualified Configuration as C
 import qualified Types as T
 
-ifsRoutine :: (Real a, Coefficient a, Monoid m, m ~ Sum Double) => Config m a -> IO ()
+ifsRoutine :: (Coefficient a, ColourScheme c, c ~ SourceCol, a ~ Int) => Config c a -> IO ()
 ifsRoutine cfg = do
-    let g = gradient cfg
+    let c = colouring cfg
     putStrLn ""
     putStrLn "IFS routine."
     putStrLn "Computing scale factors... (experimental)"
     putStrLn $ "Scale factors are: " ++ show (getScales cfg)
     putStrLn "Computing IFS..."
     putStrLn $ "I'm going to write to file '" ++ ifsfile ++ "'."
-    getPlot IFS cfg (runWriteImage ifsfile g)
+    getPlot IFS cfg (runWriteImage ifsfile c)
     putStrLn "Done writing to file 'ifs_image.png'. Finished IFS routine."
   where ifsfile = "ifs_image.png"
 
-rootsRoutine :: (Real a, Coefficient a, Monoid m, m ~ Sum Double) => Config m a -> IO ()
+rootsRoutine :: (Coefficient a, ColourScheme c, c ~ SourceCol, a ~ Int) => Config c a -> IO ()
 rootsRoutine cfg = do
-    let g = gradient cfg
+    let c = colouring cfg
     putStrLn ""
     putStrLn "Roots routine."
     putStrLn "Computing roots."
     putStrLn $ "I'm going to write to file '" ++ rootsfile ++ "'."
-    getPlot Roots cfg (runWriteImage rootsfile g)
+    getPlot Roots cfg (runWriteImage rootsfile c)
     putStrLn "Done writing to file 'roots_image.png'. Finished roots routine."
   where rootsfile = "roots_image.png"
 
-runAsCmd :: (Monoid m, m ~ Sum Double) => (Mode, Config m Int) -> IO ()
+runAsCmd :: (Coefficient a, ColourScheme c, c ~ SourceCol, a ~ Int) => (Mode, Config c a) -> IO ()
 runAsCmd (mode, cfg) = do 
     putStrLn ""
     showConfig cfg
@@ -77,12 +77,12 @@ runAsCmd (mode, cfg) = do
     getLine
     putStrLn "Bye!"
 
-runAsGui :: (Monoid m, m ~ Sum Double) => (Mode, Config m Int) -> IO ()
+runAsGui :: (ColourScheme c, Coefficient a, c ~ SourceCol, a ~ Int) => (Mode, Config c a) -> IO ()
 runAsGui (mode, cfg) = do
     putStrLn ""
     showConfig cfg
     putStrLn "    Starting GUI..."
-    getPlot mode cfg (runGuiMain (cfgToSettings cfg) (gradient cfg))
+    getPlot mode cfg (runGuiMain (cfgToSettings cfg) (colouring cfg))
 
 runGuiMain s g xs r = do rst <- r
                          runEnvT (guiMain xs rst g) s
@@ -91,18 +91,17 @@ runWriteImage fn g xs r = do rst <- r
                              writeImage xs rst g fn
 
 --TODO: allow other monoids than m ~ Sum Double
-getPlot :: (Real a, Coefficient a, Monoid m, m ~ Sum Double) => Mode -> Config m a 
+getPlot :: (ColourScheme c, m ~ ColourData c, c ~ SourceCol, Coefficient a, a ~ Int) => Mode -> Config c a
         -> (forall f v i. Foldable f => f i -> IO (IOArrayRaster v i m) -> r)
         -> r
---getPlot Roots cfg k = -- (k :: [RootPlot a] -> IO (IOArrayRaster SourceSum (RootPlot a) SourceSum) -> r) = 
---    k (getRoots cfg) $ 
---    mkRasterizer (mkRootPlot $ source1 [1,-1]) (rbCfg cfg) (ibCfg cfg)
 getPlot Roots cfg k = --(k :: [RootPlot a] -> IO (IOArrayRaster (Sum Double) (RootPlot a) (Sum Double)) -> r) = 
     k (getRoots cfg) $
-    mkRasterizer (mkRootPlot density) (rbCfg cfg) (ibCfg cfg)
+    mkRasterizer (mkRootPlot (\p r -> (toData c) (p,r))) (rbCfg cfg) (ibCfg cfg)
+        where c = colouring cfg
 getPlot IFS cfg k = --(k :: [IFSPlot a] -> IO (IOArrayRaster (Sum Double) (IFSPlot a) (Sum Double)) -> r) = 
     k (ifsPoints cfg) $ 
-    mkRasterizer (mkIFSPlot density) (rbCfg cfg) (ibCfg' cfg)
+    mkRasterizer (mkIFSPlot (\p r -> (toData c) (p,r))) (rbCfg cfg) (ibCfg' cfg)
+        where c = colouring cfg
 getPlot _ _ _ = error "TODO -- handle getPlot cases"
 
 rbCfg (Config _ (rx,ry) _ _ _ _) = (mkCd2 0 0, mkCd2 rx ry)
@@ -117,25 +116,25 @@ mkRootPlot f (RootPlot p r) = (pair mkCd2 r, f p r)
 mkIFSPlot :: (Polynomial cf -> Root -> v) -> IFSPlot cf -> (InpCoord, v)
 mkIFSPlot f (IFSPlot c) = (pair mkCd2 c, f [] c)
 
-handleOptions :: Monoid m => IO(Configuration m c)
+handleOptions :: IO(Configuration)
 handleOptions = do
     args <- getArgs
     getConfig args
 
-getConfig :: Monoid m => [String] -> IO(Configuration m c)
+getConfig :: [String] -> IO(Configuration)
 --getConfig [] = loadConfigFile "roots.config"
 --getConfig (arg:_) = loadConfigFile arg
 getConfig _ = loadConfigFile "roots.config"
 
-loadConfigFile :: Monoid m => String -> IO(Configuration m c)
+loadConfigFile :: String -> IO(Configuration)
 loadConfigFile fn = do res <- parseConfig fn =<< readFile fn
                        case res of 
                            Left err -> do putStrLn "Error loading config file:"
                                           error err
                            Right cfg -> return cfg
 
-mkConfig :: (c ~ RGBAColour, Monoid m, m ~ Sum Double) => Configuration m c -> IO() 
-mkConfig c = case get runMode c of WithGUI -> runAsGui cfg
+mkConfig :: Configuration -> IO() 
+mkConfig c = case get runMode c of WithGUI   -> runAsGui cfg
                                    ImageFile -> runAsCmd cfg
   where cfg = configForRender rdr
         rdr = case head $ get renders c of
@@ -143,7 +142,7 @@ mkConfig c = case get runMode c of WithGUI -> runAsGui cfg
                    Nothing   -> error "empty list of renders..."
 
 --TODO: make this return different gradients (using different monoids).
-configForRender :: (c ~ RGBAColour, Monoid m, m ~ Sum Double) => Render m c -> (Mode, Config m Int)
+configForRender :: Render -> (Mode, Config SourceCol Int)
 configForRender r = (mode, cfg)
   where (mode, dg) = case get renderMode r of
                          C.Roots d -> (Roots, d)
@@ -152,7 +151,7 @@ configForRender r = (mode, cfg)
                      (coordToComplex $ get renderCenter r)
                      (fst $ get renderSize r)
                      g 
-        g = gradientFromSpec monochrome black (get gradSpec r) --testing!!
+        g = ("1",[-1,1],0.08) --testing!!
                       
 main :: IO()
 main = do

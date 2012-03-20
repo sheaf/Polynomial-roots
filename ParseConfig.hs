@@ -64,7 +64,7 @@ askCfg = Config
     <*> askParse "Enter desired width." parse
 -}
 
-showConfig :: (Coefficient a) =>  Config m a -> IO()
+showConfig :: (ColourScheme c, Coefficient a) => Config c a -> IO()
 showConfig (Config ic (rx,ry) d c w g)= do
     putStrLn("Coefficient set is "++show(ic)++".")
     putStrLn("Resolution is "++show(rx)++"x"++show(ry)++".")
@@ -72,6 +72,6 @@ showConfig (Config ic (rx,ry) d c w g)= do
     putStrLn("Center is "++show(c)++".")
     let h = (w* fromIntegral(ry) / (fromIntegral(rx)))::Double
     putStrLn("Width is "++show(w)++", height is "++show(h)++".")
-    putStrLn("Gradient is: ???")
+    putStrLn("Colour scheme is: ???")
 
 

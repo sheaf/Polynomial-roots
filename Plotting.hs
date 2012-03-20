@@ -32,12 +32,3 @@ toCoords roots (rx,ry) c w  = map((\z->(floor(realPart z),ry-floor(imagPart z)))
                                   h = w * ry'/rx' 
                                   p = c - ( w/2 :+ h/2)
                                   p'= c + ( w/2 :+ h/2)
-
---Density colouring.                                  
-density :: p -> r -> Sum Double
-density _ _ = Sum 0.008 -- this should be a parameter!
-
---Colouring by source polynomial, "base n" and "scale factor" methods.
-source1, source2 :: (Coefficient a) => IterCoeffs a -> Polynomial a -> Complex Double -> SourceSum
-source1 cfs p _ = Source $ (\(a,b,c) -> (a,b,c,1)) $ toRGB $ hsv (toGValue1 cfs p) 1 1
-source2 cfs p r = Source $ (\(a,b,c) -> (a,b,c,1)) $ toRGB $ hsv (toGValue2 cfs p r) 1 1

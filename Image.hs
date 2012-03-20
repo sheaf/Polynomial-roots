@@ -12,43 +12,44 @@ import Rendering.Colour
 import Rendering.Raster
 import Rendering.ArrayRaster
 import Rendering.Coord
-import Types(Gradient(..))
+import Types hiding (outputSize)
 import Rendering.Gradient
 
 --------------------------------------------------------------------------------
 --Image writing.
 
-writePixel :: GD.Image -> Gradient m Colour Double -> RstCoord -> m -> IO()
-writePixel img g xy c = GD.setPixel (toTuple xy) clr img
-  where clr = fromColour $ runGrad g c
+writePixel :: (ColourScheme c, m ~ ColourData c) => 
+              GD.Image -> c -> RstCoord -> m -> IO()
+writePixel img c xy v = GD.setPixel (toTuple xy) clr img
+  where clr = fromColour $ flip over bg    $ (toColour c) v
+        bg  = flip over black $ (toColour c) mempty
 
-writePixels :: (Rasterizer r, RstContext r ~ IO) 
-            => r v i m -> GD.Image 
-            -> [i] -> Gradient m Colour Double -> IO()
-writePixels rst img [] g = return ()
-writePixels rst img (p:ps) g = do px <- rasterize rst p
-                                  whenJust (uncurry $ writePixel img g) px
-                                  writePixels rst img ps g
+writePixels :: (Rasterizer r, RstContext r ~ IO, ColourScheme c, m ~ ColourData c) 
+            => r v i m -> GD.Image -> [i] -> c -> IO()
+writePixels rst img [] c = return ()
+writePixels rst img (p:ps) c = do px <- rasterize rst p
+                                  whenJust (uncurry $ writePixel img c) px
+                                  writePixels rst img ps c
 
-
-writeImage :: (Foldable f, Rasterizer r, Monoid m, RstContext r ~ IO) 
-           => f i -> r v i m
-           -> Gradient m Colour Double -> FilePath -> IO ()
-writeImage xs rst g file = do
+writeImage :: (Foldable f, Rasterizer r, ColourScheme c, m ~ ColourData c, RstContext r ~ IO) 
+           => f i -> r v i m -> c -> FilePath -> IO ()
+writeImage xs rst c file = do
     let (rx,ry) = toTuple $ outputSize rst
+    let bg = fromColour $ flip over black $ (toColour c) mempty
     image <- GD.newImage (rx, ry)
-    GD.fillImage (fromColour $ runGrad g mempty) image
-    writePixels rst image (toList xs) g
+    GD.fillImage bg image
+    writePixels rst image (toList xs) c
     GD.savePngFile file image
 
 
 fromRGB8 (r,g,b) = GD.rgb (fromIntegral r) (fromIntegral g) (fromIntegral b)
 fromColour = fromRGB8 . toRGB8
 
-dumpImage :: (Rasterizer r, Monoid m, RstContext r ~ IO) 
-          => r v i m -> Gradient m Colour Double -> FilePath -> IO ()
-dumpImage rst g file = do image <- GD.newImage (rx, ry)
-                          GD.fillImage (fromColour $ runGrad g mempty) image
-                          withOutput_ rst (writePixel image g)
+dumpImage :: (Rasterizer r, ColourScheme c, m ~ ColourData c, RstContext r ~ IO) 
+          => r v i m -> c -> FilePath -> IO ()
+dumpImage rst c file = do image <- GD.newImage (rx, ry)
+                          let bg = fromColour $ flip over black $ (toColour c) mempty
+                          GD.fillImage bg image
+                          withOutput_ rst (writePixel image c)
                           GD.savePngFile file image
   where (rx,ry) = toTuple $ outputSize rst

@@ -29,9 +29,8 @@ import Util
 
 type Time = Word32
 
-guiMain :: (Foldable f, Monoid m, Rasterizer r, RstContext r ~ IO) 
-        => f i -> r v i m
-        -> Gradient m Colour Double -> EnvIO ()
+guiMain :: (Foldable f, ColourScheme c, m ~ ColourData c, Rasterizer r, RstContext r ~ IO) 
+        => f i -> r v i m -> c -> EnvIO ()
 guiMain xs rst g = bracketSDL (outputSize rst) $ runMainLoop xs rst g
 
 bracketEnvIO :: EnvIO a -> EnvIO b -> EnvIO c -> EnvIO c
@@ -53,31 +52,28 @@ getDisplaySize = toTuple
 endSDL :: EnvIO ()
 endSDL = liftIO SDL.quit
 
-runMainLoop :: (Foldable f, Monoid m, Rasterizer r, RstContext r ~ IO) 
-            => f i -> r v i m
-            -> Gradient m Colour Double -> EnvIO ()
+runMainLoop :: (Foldable f, ColourScheme c, m ~ ColourData c, Rasterizer r, RstContext r ~ IO) 
+            => f i -> r v i m -> c -> EnvIO ()
 runMainLoop xs rst g = mainLoop (toList xs) rst g
 
-drawPixel :: (Rasterizer r, RstContext r ~ IO) 
-            => r v i m -> Gradient m Colour Double 
-            -> SDL.Surface -> i -> IO ()
+drawPixel :: (Rasterizer r, RstContext r ~ IO, ColourScheme c, m ~ ColourData c) 
+            => r v i m -> c -> SDL.Surface -> i -> IO ()
 drawPixel rst g surf p = do r <- rasterize rst p
                             renderPixel g surf `whenJust` r
 
-renderPixel :: Gradient m Colour Double -> SDL.Surface 
+renderPixel :: (ColourScheme c, m ~ ColourData c) => c -> SDL.Surface 
             -> (Cd2 Int, m) -> IO ()
-renderPixel g surf (xy, v) = do let c = runGrad g v
-                                setPixel (toTuple xy) (toRGB8 c) surf
+renderPixel c surf (xy, v) = do let bg = flip over black $ (toColour c) mempty
+                                let col = flip over bg $ (toColour c) v
+                                setPixel (toTuple xy) (toRGB8 col) surf
 
-mainLoop :: (Rasterizer r, Monoid m, RstContext r ~ IO) 
-         => [i] -> r v i m
-         -> Gradient m Colour Double -> EnvIO ()
+mainLoop :: (Rasterizer r, ColourScheme c, m ~ ColourData c, RstContext r ~ IO) 
+         => [i] -> r v i m -> c -> EnvIO ()
 mainLoop xs rst g = do xs' <- withMinDelay 5 (timedDraw g rst 5 xs)
                        handleEvents xs' rst g =<< liftIO newEvents
 
-handleEvents :: (Rasterizer r, Monoid m, RstContext r ~ IO) 
-             => [i] -> r v i m -> Gradient m Colour Double 
-             -> [Event] -> EnvIO ()
+handleEvents :: (Rasterizer r, ColourScheme c, m ~ ColourData c, RstContext r ~ IO) 
+             => [i] -> r v i m -> c -> [Event] -> EnvIO ()
 handleEvents xs rst g evs | done      = return ()
                           | otherwise = do mapM_ handleClicks clicks
                                            mapM_ (handleKeys rst g) keys
@@ -122,9 +118,8 @@ delayUntil t = do cur <- SDL.getTicks
                   when (cur < t) (SDL.delay $ t - cur)
 
 
-timedDraw :: (Rasterizer r, RstContext r ~ IO) 
-          => Gradient m Colour Double -> r v i m
-          -> Time -> [i] -> EnvIO [i]
+timedDraw :: (Rasterizer r, RstContext r ~ IO, ColourScheme c, m ~ ColourData c) 
+          => c -> r v i m -> Time -> [i] -> EnvIO [i]
 timedDraw _ _ _ [] = return []
 timedDraw g rst dt xs = do cur <- liftIO SDL.getTicks
                            s <- liftIO SDL.getVideoSurface
