@@ -17,13 +17,14 @@ import Interval
 import Rendering.Colour
 
 data RootPlot a = RootPlot (Polynomial a) Root 
-newtype IFSPlot a = IFSPlot (Complex Double)
+data IFSPlot  a = IFSPlot  (Polynomial a) (Complex Double)
 
 type PixelOrig = Integer
 
 type PlotData = (Pixel, PixelOrig)
 
 instance Show (RootPlot a) where show (RootPlot _ x) = show x
+instance Show (IFSPlot a) where show (IFSPlot _ x) = show x
 
 toCoords roots (rx,ry) c w  = map((\z->(floor(realPart z),ry-floor(imagPart z)))
                                   .(\z -> (rx'/w :+ 0) * (z-p)))

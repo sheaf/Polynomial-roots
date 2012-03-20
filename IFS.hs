@@ -36,11 +36,11 @@ scalePoint c z p = z * scale
     where scale = (negate . recip . (`evaluate` c)) . derivative . map toComplex $ p
 
 ifsCheatCounts :: (Coefficient a) => Config m a -> Scaler a -> [Polynomial a] -> [IFSPlot a]
-ifsCheatCounts (Config _ _ _ c _ _ ) f ps = map IFSPlot points
-    where points = map (\p -> f (flip evaluate c . map toComplex $ p) p) ps
+ifsCheatCounts (Config _ _ _ c _ _ ) f ps = (\p -> map (IFSPlot p) . findPoints $ p) =<< ps
+    where findPoints pol = [(\p -> f (flip evaluate c . map toComplex $ p) p) pol]
 
 ifsIterates :: Iterations -> IFS -> [Complex Double]
-ifsIterates 0 (_,vals) = vals
+ifsIterates 0 (_ ,vals) = vals
 ifsIterates n (fs,vals) = fs =<< ifsIterates (n-1) (fs,vals)
 
 ifsCounts :: (Coefficient a) => [Complex Double] -> IFS 

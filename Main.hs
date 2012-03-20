@@ -114,7 +114,7 @@ mkRootPlot :: (Polynomial cf -> Root -> v) -> RootPlot cf -> (InpCoord, v)
 mkRootPlot f (RootPlot p r) = (pair mkCd2 r, f p r)
 
 mkIFSPlot :: (Polynomial cf -> Root -> v) -> IFSPlot cf -> (InpCoord, v)
-mkIFSPlot f (IFSPlot c) = (pair mkCd2 c, f [] c)
+mkIFSPlot f (IFSPlot p c) = (pair mkCd2 c, f p c)
 
 handleOptions :: IO(Configuration)
 handleOptions = do
