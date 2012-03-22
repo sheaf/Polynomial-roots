@@ -65,7 +65,7 @@ pGradSpecExpr :: (Monad m) => ParsecT String u m GradientSpec
 pGradSpecExpr = choice [pGradName] --, pGradSplit, pGradCmb, pGradTrans]
 
 pGradName :: (Monad m) => ParsecT String u m GradientSpec
-pGradName = NamedGradient <$> pName
+pGradName = DensityMethod <$> pName
 
 {-
 pGradSplit :: (Monad m) => ParsecT String u m GradientSpec

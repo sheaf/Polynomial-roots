@@ -1,10 +1,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
+
 module Configuration where
 
 import Overture
 import Prelude ()
+import Data.Colour
 import Data.Label (mkLabels)
 import Pair
 import Rendering.Coord hiding (size)
@@ -28,7 +30,7 @@ data BlendFunction = Blend | Overlay
 
 type TransFunc m n = m -> n
 
-data GradientSpec = NamedGradient String -- | Source
+data GradientSpec = DensityMethod String | SourceMethod (String,[Int],Double,String) 
     deriving (Eq, Ord, Read, Show)
 
 data Render = Render { _renderSpec :: RenderSpec

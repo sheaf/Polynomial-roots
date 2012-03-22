@@ -38,7 +38,7 @@ import Rendering.Coord
 import qualified Configuration as C
 import qualified Types as T
 
-ifsRoutine :: (Coefficient a, ColourScheme c, c ~ SourceCol, a ~ Int) => Config c a -> IO ()
+ifsRoutine :: (ColourScheme c, Coefficient a, c ~ SourceCol, a ~ Int) => Config c a -> IO ()
 ifsRoutine cfg = do
     let c = colouring cfg
     putStrLn ""
@@ -51,7 +51,7 @@ ifsRoutine cfg = do
     putStrLn "Done writing to file 'ifs_image.png'. Finished IFS routine."
   where ifsfile = "ifs_image.png"
 
-rootsRoutine :: (Coefficient a, ColourScheme c, c ~ SourceCol, a ~ Int) => Config c a -> IO ()
+rootsRoutine :: (ColourScheme c, Coefficient a, c ~ SourceCol, a ~ Int) => Config c a -> IO ()
 rootsRoutine cfg = do
     let c = colouring cfg
     putStrLn ""
@@ -62,7 +62,7 @@ rootsRoutine cfg = do
     putStrLn "Done writing to file 'roots_image.png'. Finished roots routine."
   where rootsfile = "roots_image.png"
 
-runAsCmd :: (Coefficient a, ColourScheme c, c ~ SourceCol, a ~ Int) => (Mode, Config c a) -> IO ()
+runAsCmd :: (ColourScheme c, Coefficient a, c ~ SourceCol, a ~ Int) => (Mode, Config c a) -> IO ()
 runAsCmd (mode, cfg) = do 
     putStrLn ""
     showConfig cfg
@@ -90,17 +90,17 @@ runGuiMain s g xs r = do rst <- r
 runWriteImage fn g xs r = do rst <- r
                              writeImage xs rst g fn
 
---TODO: allow other monoids than m ~ Sum Double
-getPlot :: (ColourScheme c, m ~ ColourData c, c ~ SourceCol, Coefficient a, a ~ Int) => Mode -> Config c a
+--TODO: allow different colouring schemes without refactoring everything...
+getPlot :: (ColourScheme c, m ~ ColourData c, Coefficient a, c ~ SourceCol, a ~ Int) => Mode -> Config c a
         -> (forall f v i. Foldable f => f i -> IO (IOArrayRaster v i m) -> r)
         -> r
-getPlot Roots cfg k = --(k :: [RootPlot a] -> IO (IOArrayRaster (Sum Double) (RootPlot a) (Sum Double)) -> r) = 
+getPlot Roots cfg k = 
     k (getRoots cfg) $
-    mkRasterizer (mkRootPlot (\p r -> (toData c) (p,r))) (rbCfg cfg) (ibCfg cfg)
+    mkRasterizer (mkRootPlot $ curry (toData c)) (rbCfg cfg) (ibCfg cfg)
         where c = colouring cfg
-getPlot IFS cfg k = --(k :: [IFSPlot a] -> IO (IOArrayRaster (Sum Double) (IFSPlot a) (Sum Double)) -> r) = 
+getPlot IFS cfg k = 
     k (ifsPoints cfg) $ 
-    mkRasterizer (mkIFSPlot (\p r -> (toData c) (p,r))) (rbCfg cfg) (ibCfg' cfg)
+    mkRasterizer (mkIFSPlot $ curry (toData c)) (rbCfg cfg) (ibCfg' cfg)
         where c = colouring cfg
 getPlot _ _ _ = error "TODO -- handle getPlot cases"
 
@@ -142,7 +142,7 @@ mkConfig c = case get runMode c of WithGUI   -> runAsGui cfg
                    Nothing   -> error "empty list of renders..."
 
 --TODO: make this return different gradients (using different monoids).
-configForRender :: Render -> (Mode, Config SourceCol Int)
+configForRender :: (ColourScheme c, Coefficient a, c ~ SourceCol, a ~ Int) => Render -> (Mode, Config c a)
 configForRender r = (mode, cfg)
   where (mode, dg) = case get renderMode r of
                          C.Roots d -> (Roots, d)
@@ -151,7 +151,7 @@ configForRender r = (mode, cfg)
                      (coordToComplex $ get renderCenter r)
                      (fst $ get renderSize r)
                      g 
-        g = ("1",[-1,1],0.08) --testing!!
+        g = ("1",[-1,1],0.08,hsv') --testing!!
                       
 main :: IO()
 main = do

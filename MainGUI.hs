@@ -69,7 +69,7 @@ renderPixel c surf (xy, v) = do let bg = flip over black $ (toColour c) mempty
 
 mainLoop :: (Rasterizer r, ColourScheme c, m ~ ColourData c, RstContext r ~ IO) 
          => [i] -> r v i m -> c -> EnvIO ()
-mainLoop xs rst g = do xs' <- withMinDelay 5 (timedDraw g rst 5 xs)
+mainLoop xs rst g = do xs' <- withMinDelay 10 (timedDraw g rst 10 xs)
                        handleEvents xs' rst g =<< liftIO newEvents
 
 handleEvents :: (Rasterizer r, ColourScheme c, m ~ ColourData c, RstContext r ~ IO) 

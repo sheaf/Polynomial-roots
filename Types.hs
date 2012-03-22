@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeFamilies, TypeSynonymInstances,
-             FlexibleContexts, FlexibleInstances #-}
+             FlexibleContexts, FlexibleInstances, ExistentialQuantification #-}
 module Types ( module Types
              , module Configuration
              , module Data.Complex
@@ -75,18 +75,21 @@ type Pixel      = (Int,Int)
 type Scaler a   = Complex Double -> Polynomial a -> Complex Double
 --Gradient as a monoid homomorphism into colour space.
 newtype Gradient m clr a = Grad { runGrad :: m -> clr a }
+type DGradient = Gradient Double AlphaColour Double
 data Mode = Roots | IFS | Both deriving (Eq, Ord, Read, Show)
-data Config c a = Config { coefficients :: [a]
-                         , resolution   :: Resolution
-                         , degree       :: Degree
-                         , center       :: Center
-                         , width        :: Width
-                         , colouring    :: SourceCol
-                         }
+data Config c a = (ColourScheme c, Coefficient a) =>
+                          Config 
+                          { coefficients :: [a]
+                          , resolution   :: Resolution
+                          , degree       :: Degree
+                          , center       :: Center
+                          , width        :: Width
+                          , colouring    :: c
+                          }
 
 --Colouring schemes.
-type SourceCol  = (String, [Int], Double) --allow other lists than [Int]
-type DensityCol = (Gradient (Sum Double) AlphaColour Double, Double)
+type SourceCol  = (String, [Int], Double, DGradient) --allow other lists than [Int]
+type DensityCol = (DGradient, Double)
 
 type Colouring = Either SourceCol DensityCol
 

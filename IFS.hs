@@ -29,7 +29,11 @@ getScales (Config ic (rx,ry) d c w g) = scales
   where scales = scaleFactors (Config ic (rx,ry) (d+8) c (w/ fromIntegral rx) g)  
             -- bear in mind scaleFactors uses w as an error bound...
 
-
+ifsPolys :: IFS -> Degree -> [(Polynomial Int, Point)]
+ifsPolys (_,vs) 0 = zip (map (:[]) [0,0..]) vs
+ifsPolys (f,vs) d = concatMap g prev                 
+    where g (p,c) = zip (map (p++) (map (:[]) [1..])) (f c)
+          prev    = ifsPolys (f,vs) (d-1)
           
 scalePoint :: (Coefficient a) => Complex Double -> Scaler a -- Scaler a ~ (Complex Double -> Polynomial a -> Complex Double)
 scalePoint c z p = z * scale
@@ -57,8 +61,8 @@ ifsPoints cfg@(Config ic (rx,ry) d c w g) = ifspoints
         --ifs = toifs ic c
         --ifspoints = ifsCounts scales ifs (Config ic (rx,ry) (d+1) c w g)
         h = (w* fromIntegral(ry) / (fromIntegral(rx)))::Double
-        cI = c +! ((-w/2) :+ (-h/2),(w/2) :+ (h/2))
-        --cI = ((-8):+(-8),8:+8) --no cheating, don't do any pruning!
+        --cI = c +! ((-w/2) :+ (-h/2),(w/2) :+ (h/2))
+        cI = ((-8):+(-8),8:+8) --no cheating, don't do any pruning!
         pols = canHaveRoots ic d cI
         ifspoints = ifsCheatCounts (Config ic (rx,ry) d c w g) (scalePoint c) pols 
         --ifspoints = ifsCheatCounts (Config ic (rx,ry) d c w g) (\z p -> z) pols
