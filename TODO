@@ -11,6 +11,7 @@ Unify different rendering schemes: use of Int or other coefficients,
 Computation:
 
 Optimise (better bounds, etc).
+Allow parallel evaluation and use of multiple cores.
 
 
 
@@ -28,6 +29,8 @@ Complete unification of different IFS methods, minimising code overlap.
 
 
 Parsing:
+
+Major rework of parsing needed. Some issues:
 
 Error if no config file found.
 Explain config file specification.
