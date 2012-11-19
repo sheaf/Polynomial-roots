@@ -1,15 +1,15 @@
 Name:                polynomial-roots
-Version:             0.1
+Version:             0.2
 Synopsis:            Generates images related to roots of polynomials
 Description:         Explore plots of polynomial roots on the complex plane and
                      their relationship to iterated function systems.
                      
                      Currently very incomplete.
-Homepage:            https://github.com/isomorphism/Polynomial-roots
+Homepage:            https://github.com/sheaf/Polynomial-roots
 License:             OtherLicense
 License-file:        LICENSE
 Author:              Sam Derbyshire & C. A. McCann
-Maintainer:          cam@uptoisomorphism.net
+Maintainer:          sam.derbyshire@gmail.com, cam@uptoisomorphism.net
 Category:            Math
 Build-type:          Simple
 Cabal-version:       >=1.2
