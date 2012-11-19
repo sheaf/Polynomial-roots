@@ -21,7 +21,7 @@ type PixelOrig = Integer
 
 type PlotData = (Pixel, PixelOrig)
 
-toCoords roots (rx,ry) c w  = map((\z->(floor(realPart z),ry-*floor(imagPart z)))
+toCoords roots (rx,ry) c w  = map((\z->(floor(realPart z),ry-floor(imagPart z)))
                                   .(\z -> (rx'/w :+ 0) * (z-p)))
                               $ filter (\z -> elemI z (p,p')) roots
                             where [rx',ry'] = map fromIntegral [rx,ry]
