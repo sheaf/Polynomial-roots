@@ -1,161 +1,214 @@
-{- Polynomial roots.
-Computes the set of polynomials with a particular restricted set of coeffs,
-who might have roots in a particular rectangle in the complex plane,
-using tree pruning.-}
-
-{-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ExistentialQuantification #-}
 
 module Main where
 
 import Overture hiding(fst,snd)
 import Prelude ()
+
 import Control.Exception(IOException,handle)
-import System.Environment(getArgs)
-import System.IO
-import Data.Char
 import Data.Foldable (Foldable, toList)
 import Data.Maybe
-import Data.Monoid
-import Roots
+import System.Environment(getArgs)
+import System.IO
+import Text.Parsec hiding(many, optional)
+import qualified Text.Parsec as P
+
+import qualified Configuration as C
+import Configuration.Parsing
 import IFS
-import Types
-import Plotting
 import Image
-import ParseConfig
 import MainGUI
 import Pair
-import Settings
-import Configuration hiding (Roots, IFS)
-import Configuration.Parsing
+import Plotting
+import Rendering.ArrayRaster
 import Rendering.Colour
+import Rendering.Coord
 import Rendering.Gradient
 import Rendering.Raster
-import Rendering.ArrayRaster
-import Rendering.Coord
-import qualified Configuration as C
+import Roots
+import Settings
+import Types
 import qualified Types as T
 
-ifsRoutine :: (ColourScheme c, Coefficient a, c ~ SourceCol, a ~ Int) => Config c a -> IO ()
-ifsRoutine cfg = do
-    let c = colouring cfg
-    putStrLn ""
-    putStrLn "IFS routine."
-    putStrLn "Computing scale factors... (experimental)"
-    putStrLn $ "Scale factors are: " ++ show (getScales cfg)
-    putStrLn "Computing IFS..."
-    putStrLn $ "I'm going to write to file '" ++ ifsfile ++ "'."
-    getPlot IFS cfg (runWriteImage ifsfile c)
-    putStrLn "Done writing to file 'ifs_image.png'. Finished IFS routine."
-  where ifsfile = "ifs_image.png"
+--------------------------------------------------------------------------------
+--Mode definitions.
 
-rootsRoutine :: (ColourScheme c, Coefficient a, c ~ SourceCol, a ~ Int) => Config c a -> IO ()
-rootsRoutine cfg = do
-    let c = colouring cfg
-    putStrLn ""
-    putStrLn "Roots routine."
-    putStrLn "Computing roots."
-    putStrLn $ "I'm going to write to file '" ++ rootsfile ++ "'."
-    getPlot Roots cfg (runWriteImage rootsfile c)
-    putStrLn "Done writing to file 'roots_image.png'. Finished roots routine."
-  where rootsfile = "roots_image.png"
+class (ColourScheme (ModeColour m)) => Mode m where
+    type ModeColour m :: *
+    type ModeConfig m :: *
+    getInputData :: m -> ModeConfig m -> [InputData (ModeColour m)]
+    parseConfig :: (Monad n) => m -> ParsecT String u n (ModeConfig m)
+    extractCol :: m -> ModeConfig m -> ModeColour m
+    getib :: m -> ModeConfig m -> (Cd2 Double, Cd2 Double)
 
-runAsCmd :: (ColourScheme c, Coefficient a, c ~ SourceCol, a ~ Int) => (Mode, Config c a) -> IO ()
-runAsCmd (mode, cfg) = do 
-    putStrLn ""
-    showConfig cfg
-    putStrLn ""
-    case mode of
-        Roots -> rootsRoutine cfg
-        IFS -> ifsRoutine cfg
-        Both -> do rootsRoutine cfg
-                   ifsRoutine cfg
+data IFSDensityMode   a = IFSDensityMode
+data IFSSourceMode    a = IFSSourceMode
+data RootsSourceMode  a = RootsSourceMode
+data RootsDensityMode a = RootsDensityMode
+
+instance (PCoefficient a) => Mode (IFSDensityMode a) where
+    type ModeColour (IFSDensityMode a) = DensityCol
+    type ModeConfig (IFSDensityMode a) = Config DensityCol a
+    getInputData = const ((map (\(a,b) -> b)) . ifsPoints)
+    getib = const (\ (Config _ _       _ c w _) -> let wC = (w/2) :+ (w/2) 
+                                                   in (pair mkCd2 (0 - wC), pair mkCd2 (0 + wC)))
+    extractCol _ = (\ (Config _ _ _ _ _ g) -> g)
+    parseConfig _ = pModeConfig pDensityCol
+
+instance (PCoefficient a) => Mode (IFSSourceMode a) where
+    type ModeColour (IFSSourceMode a) = SourceCol a
+    type ModeConfig (IFSSourceMode a) = Config (SourceCol a) a
+    getInputData = const ifsPoints
+    getib = const (\ (Config _ _       _ c w _) -> let wC = (w/2) :+ (w/2) 
+                                                   in (pair mkCd2 (0 - wC), pair mkCd2 (0 + wC)))
+    extractCol _ = (\ (Config _ _ _ _ _ g) -> g)
+    parseConfig _ = pModeConfig (pSourceCol pCoeff)
+
+instance (PCoefficient a) => Mode (RootsSourceMode a) where
+    type ModeColour (RootsSourceMode a) = SourceCol a
+    type ModeConfig (RootsSourceMode a) = Config (SourceCol a) a
+    getInputData = const getRoots
+    getib = const (\ (Config _ _       _ c w _) -> let wC = (w/2) :+ (w/2) 
+                                                   in (pair mkCd2 (c - wC), pair mkCd2 (c + wC)))
+    extractCol _ = (\ (Config _ _ _ _ _ g) -> g)
+    parseConfig _ = pModeConfig (pSourceCol pCoeff)
+
+instance (PCoefficient a) => Mode (RootsDensityMode a) where
+    type ModeColour (RootsDensityMode a) = DensityCol
+    type ModeConfig (RootsDensityMode a) = Config DensityCol a
+    getInputData = const (map (\(a,b) -> b) . getRoots)
+    getib = const (\ (Config _ _       _ c w _) -> let wC = (w/2) :+ (w/2) 
+                                                   in (pair mkCd2 (c - wC), pair mkCd2 (c + wC)))
+    extractCol _ = (\ (Config _ _ _ _ _ g) -> g)
+    parseConfig _ = pModeConfig pDensityCol
+
+--------------------------------------------------------------------------------
+--Routines.
+
+routine :: Mode m => m -> ModeConfig m -> ModeColour m -> RunSpec -> IO()
+routine mode cfg col spec = do
+    putStrLn "Starting routine."
+    putStrLn $ "I'm going to write to file '" ++ file ++ "'."
+    getPlot mode cfg col spec (runWriteImage file col)
+    putStrLn $ "Done writing to file '" ++ file ++"'. Finished routine."
+  where file = "image.png"
+
+runAsCmd :: Mode m => m -> ModeConfig m -> ModeColour m -> RunSpec -> IO ()
+runAsCmd mode cfg col spec = do
+    routine mode cfg col spec
     putStrLn ""
     putStrLn "All done here! Press enter to quit."
     getLine
     putStrLn "Bye!"
 
-runAsGui :: (ColourScheme c, Coefficient a, c ~ SourceCol, a ~ Int) => (Mode, Config c a) -> IO ()
-runAsGui (mode, cfg) = do
-    putStrLn ""
-    showConfig cfg
-    putStrLn "    Starting GUI..."
-    getPlot mode cfg (runGuiMain (cfgToSettings cfg) (colouring cfg))
+runAsGui :: Mode m => m -> ModeConfig m -> ModeColour m -> RunSpec -> IO ()
+runAsGui mode cfg col spec = do
+    putStrLn "Starting GUI..."
+    getPlot mode cfg col spec (runGuiMain mode spec col)
 
-runGuiMain s g xs r = do rst <- r
-                         runEnvT (guiMain xs rst g) s
+runGuiMain :: (Foldable f, Mode m) => 
+           m -> RunSpec -> ModeColour m 
+           -> f i -> IO (IOArrayRaster v i (ColourData (ModeColour m))) -> IO()
+runGuiMain mode spec col xs r = do rst <- r
+                                   runEnvT (guiMain xs rst col) s
+    where s = specToSettings spec
 
 runWriteImage fn g xs r = do rst <- r
                              writeImage xs rst g fn
 
---TODO: allow different colouring schemes without refactoring everything...
-getPlot :: (ColourScheme c, m ~ ColourData c, Coefficient a, c ~ SourceCol, a ~ Int) => Mode -> Config c a
-        -> (forall f v i. Foldable f => f i -> IO (IOArrayRaster v i m) -> r)
-        -> r
-getPlot Roots cfg k = 
-    k (getRoots cfg) $
-    mkRasterizer (mkRootPlot $ curry (toData c)) (rbCfg cfg) (ibCfg cfg)
-        where c = colouring cfg
-getPlot IFS cfg k = 
-    k (ifsPoints cfg) $ 
-    mkRasterizer (mkIFSPlot $ curry (toData c)) (rbCfg cfg) (ibCfg' cfg)
-        where c = colouring cfg
-getPlot _ _ _ = error "TODO -- handle getPlot cases"
+getrb :: RunSpec -> (Cd2 Int, Cd2 Int)
+getrb spec = (mkCd2 0 0, r)
+    where Just render = head . get renders $ spec
+          r = get C.outputSize render
 
-rbCfg (Config _ (rx,ry) _ _ _ _) = (mkCd2 0 0, mkCd2 rx ry)
-ibCfg (Config _ _ _ c w _) = (pair mkCd2 (c - wC), pair mkCd2 (c + wC))
-    where wC = (w/2) :+ (w/2)
-ibCfg' (Config _ _ _ c w _) = (pair mkCd2 (0 - wC), pair mkCd2 (0 + wC))
-    where wC = (w/2) :+ (w/2)
+getPlot :: (Mode m) => m -> ModeConfig m -> ModeColour m -> RunSpec
+                    -> (forall f v i. Foldable f => f i -> IO (IOArrayRaster v i (ColourData (ModeColour m))) -> r)
+                    -> r
+getPlot mode cfg col spec k =
+    k (getInputData mode cfg) $
+    mkRasterizer (\inp -> (pair mkCd2 (toCoord col inp), toData col inp)) (getrb spec) (getib mode cfg)
 
-mkRootPlot :: (Polynomial cf -> Root -> v) -> RootPlot cf -> (InpCoord, v)
-mkRootPlot f (RootPlot p r) = (pair mkCd2 r, f p r)
+--------------------------------------------------------------------------------
+--Config handling.
 
-mkIFSPlot :: (Polynomial cf -> Root -> v) -> IFSPlot cf -> (InpCoord, v)
-mkIFSPlot f (IFSPlot p c) = (pair mkCd2 c, f p c)
+mkFromConfig :: Mode m => m -> ModeConfig m -> ModeColour m -> RunSpec -> IO()
+mkFromConfig mode cfg col spec = case get runMode spec of 
+                                      WithGUI   -> runAsGui mode cfg col spec
+                                      ImageFile -> runAsCmd mode cfg col spec
 
-handleOptions :: IO(Configuration)
-handleOptions = do
-    args <- getArgs
-    getConfig args
+--------------------------------------------------------------------------------
+--Routines for existential types.
 
-getConfig :: [String] -> IO(Configuration)
---getConfig [] = loadConfigFile "roots.config"
---getConfig (arg:_) = loadConfigFile arg
-getConfig _ = loadConfigFile "roots.config"
+data AnyMode = forall m. (Mode m) => AnyMode m
+data AnyConfig = forall m. (Mode m) => AnyConfig m (ModeConfig m) (ModeColour m)
+data AnyPCoeff = forall a. (PCoefficient a) => PCoeff a
 
-loadConfigFile :: String -> IO(Configuration)
-loadConfigFile fn = do res <- parseConfig fn =<< readFile fn
-                       case res of 
-                           Left err -> do putStrLn "Error loading config file:"
-                                          error err
-                           Right cfg -> return cfg
+mkFromConfig' :: AnyConfig -> RunSpec -> IO()
+mkFromConfig' (AnyConfig mode cfg col) = mkFromConfig mode cfg col
 
-mkConfig :: Configuration -> IO() 
-mkConfig c = case get runMode c of WithGUI   -> runAsGui cfg
-                                   ImageFile -> runAsCmd cfg
-  where cfg = configForRender rdr
-        rdr = case head $ get renders c of
-                   Just rdr' -> rdr'
-                   Nothing   -> error "empty list of renders..."
+--------------------------------------------------------------------------------
+--Parsing.
 
---TODO: make this return different gradients (using different monoids).
-configForRender :: (ColourScheme c, Coefficient a, c ~ SourceCol, a ~ Int) => Render -> (Mode, Config c a)
-configForRender r = (mode, cfg)
-  where (mode, dg) = case get renderMode r of
-                         C.Roots d -> (Roots, d)
-                         C.IFS d   -> (IFS, d)
-        cfg = Config [-1, 1] (toTuple $ get C.outputSize r) dg
-                     (coordToComplex $ get renderCenter r)
-                     (fst $ get renderSize r)
-                     g 
-        g = ("1",[-1,1],0.08,hsv') --testing!!
-                      
+pAnyMode :: Monad m => ParsecT String u m AnyMode
+pAnyMode = do manyTill anyChar (try $ newline *> pString "mode")
+              mode <- pField "" *> ((,,) <$> choice [pString "roots", pString "ifs"] 
+                                         <*> choice [pString "source", pString "density"]
+                                         <*> choice [pString "int", pString "double", pString "complex", pString "rational"])
+              P.optional $ pFieldSep
+              P.many newline
+              pString "{"
+              let mode' = case mode of
+              --sorry!!
+                               ("roots","source" ,"int"     ) -> AnyMode (RootsSourceMode  :: RootsSourceMode  Int             )
+                               ("roots","density","int"     ) -> AnyMode (RootsDensityMode :: RootsDensityMode Int             )
+                               ("ifs"  ,"source" ,"int"     ) -> AnyMode (IFSSourceMode    :: IFSSourceMode    Int             )
+                               ("ifs"  ,"density","int"     ) -> AnyMode (IFSDensityMode   :: IFSDensityMode   Int             )
+                               ("roots","source" ,"double"  ) -> AnyMode (RootsSourceMode  :: RootsSourceMode  Double          )
+                               ("roots","density","double"  ) -> AnyMode (RootsDensityMode :: RootsDensityMode Double          )
+                               ("ifs"  ,"source" ,"double"  ) -> AnyMode (IFSSourceMode    :: IFSSourceMode    Double          )
+                               ("ifs"  ,"density","double"  ) -> AnyMode (IFSDensityMode   :: IFSDensityMode   Double          )
+                               ("roots","source" ,"rational") -> AnyMode (RootsSourceMode  :: RootsSourceMode  Rational        )
+                               ("roots","density","rational") -> AnyMode (RootsDensityMode :: RootsDensityMode Rational        )
+                               ("ifs"  ,"source" ,"rational") -> AnyMode (IFSSourceMode    :: IFSSourceMode    Rational        )
+                               ("ifs"  ,"density","rational") -> AnyMode (IFSDensityMode   :: IFSDensityMode   Rational        )
+                               ("roots","source" ,"complex" ) -> AnyMode (RootsSourceMode  :: RootsSourceMode  (Complex Double))
+                               ("roots","density","complex" ) -> AnyMode (RootsDensityMode :: RootsDensityMode (Complex Double))
+                               ("ifs"  ,"source" ,"complex" ) -> AnyMode (IFSSourceMode    :: IFSSourceMode    (Complex Double))
+                               ("ifs"  ,"density","complex" ) -> AnyMode (IFSDensityMode   :: IFSDensityMode   (Complex Double))
+              return mode'
+
+modeConfigFromMode :: String -> AnyMode -> IO(Either String AnyConfig)
+modeConfigFromMode fn (AnyMode mode) = do
+    cfg <- (runParse (parseConfig mode) fn =<< readFile fn)
+    let res = case cfg of
+                   Left s    -> Left s
+                   Right cfg -> Right (AnyConfig mode cfg (extractCol mode cfg))
+    return res
+
+--------------------------------------------------------------------------------
+--Main.
+
+writeError :: String -> IO()
+writeError s = do putStrLn "Parse error:"
+                  putStrLn s
+                  putStrLn "Terminating application."
+
 main :: IO()
 main = do
     putStrLn "This program produces images of polynomial roots."
-    putStrLn ""
-    cfg <- handleOptions
-    mkConfig cfg
+    putStrLn "Reading configuration from file 'roots.config'."
+    let fn = "roots.config"
+    spec <- (runParse (pRunSpec) fn =<< readFile fn)
+    mode <- (runParse pAnyMode fn =<< readFile fn)
+    case (spec, mode) of
+         (Left s,_) -> writeError s
+         (_,Left s) -> writeError s
+         (Right rspec, Right rmode) -> do cfg <- (modeConfigFromMode fn rmode)
+                                          case cfg of
+                                               Left s     -> writeError s
+                                               Right rCfg -> mkFromConfig' rCfg rspec

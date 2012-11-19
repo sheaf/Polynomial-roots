@@ -5,21 +5,13 @@ module Rendering.Gradient where
 
 import Overture
 import Prelude ()
+import Control.Arrow(first,second)
 import Data.Colour.Names
 import Data.Maybe
 import Data.Monoid
 import Rendering.Colour
 import Data.List(lookup)
 import Types
-
---Useful monoid amenable to colouring (for source colouring especially).
---Think: (R,G,B,Opacity).
---TODO: use standard colour types that are already defined!!
-newtype SourceSum = Source (Double,Double,Double,Double)
-instance Monoid SourceSum where
-    mempty = Source (0,0,0,0) -- technically any (r,g,b,0)...
-    mappend (Source (r1,g1,b1,n)) (Source (r2,g2,b2,m)) = 
-        Source ( (r1*n + r2*m)/(n+m),(g1*n + g2*m)/(n+m),(b1*n + b2*m)/(n+m), n+m-n*m) 
 
 apGrad :: m -> Gradient m f a -> f a
 apGrad = flip runGrad
@@ -80,6 +72,8 @@ collate cvs1 = Grad $ blender cvs'
                     (c2,a2) = fromJust $ head $ dropWhile (\(a,b) -> b < n2) cvs 
                     n' = if a1==a2 then n2 else (n2-a1)/(a2-a1)
 
+collateOpaque = collate . map (first opaque)
+
 asHue :: Gradient Double AlphaColour Double
 asHue = Grad (\n -> opaque $ hsv n 1 1)
 
@@ -89,42 +83,27 @@ opacify bg = onOutput (`over` bg)
 fadeIn c = linear (opaque c) transparent
 fadeOut c = linear transparent (opaque c)
 
-warm, cold, sunset, hsv' :: (Ord a, Floating a) => Gradient a AlphaColour a
-warm = collate [(opaque black,0),(opaque red,1/3),(opaque yellow,2/3),(opaque white,1)]
-cold = collate [(opaque black,0),(opaque blue,1/3),(opaque cyan,2/3),(opaque white,1)]
-sunset = collate [(opaque black,0),(opaque purple, 1/5), (opaque firebrick, 2/5), (opaque goldenrod, 1/2), (opaque orange, 3/5), (opaque white, 1)]
-hsv' = collate [(opaque red,0),(opaque yellow,1/6),(opaque lime,2/6),(opaque cyan,3/6),(opaque blue,4/6),(opaque magenta,5/6),(opaque red,1)]
---note: lime is RGB 0 255 0; green isn't
+warm   = collateOpaque [(black,0),(red   ,1/3),(yellow   ,2/3),(white    ,1)]
+cold   = collateOpaque [(black,0),(blue  ,1/3),(cyan     ,2/3),(white    ,1)]
+sunset = collateOpaque [(black,0),(purple,1/5),(firebrick,2/5),(goldenrod,1/2)
+                       ,(orange,3/5),(white,1)]
 
 monochrome' = constant (opaque white)
-monochrome = Grad { runGrad = runGrad monochrome'}
+monochrome = Just $ Grad { runGrad = runGrad monochrome'}
 
---gradientByName :: String -> Maybe(Gradient Double AlphaColour Double)
-gradientByName "warm" = Just warm
-gradientByName "cold" = Just cold
-gradientByName "sunset" = Just sunset
-gradientByName "monochrome" = Just monochrome
-gradientByName "transparent" = Just $ constant transparent
-gradientByName "hsv" = Just hsv'
---gradientByName "source" = Just sourceGradient
-gradientByName _ = Nothing
+gradientByName "warm"        = Just warm
+gradientByName "cold"        = Just cold
+gradientByName "sunset"      = Just sunset
+gradientByName _             = Nothing
 
-
---gradientFromSpec :: Gradient m AlphaColour Double -> Colour Double 
---                 -> GradientSpec -> Gradient m Colour Double 
 gradientFromSpec def bg gSpec = opacify bg $ fromExpr gSpec ?? def
 
-fromExpr (DensityMethod g) = gradientByName g
---fromExpr (Split gns) = splitGrads gns
---fromExpr (Combine f xs) = combineGrads (getBlendFunc f) =<< mapM fromExpr xs
---fromExpr (Transform f g) = getTransFunc f <$> fromExpr g
---fromExpr (Collate cols) = Just $ (onInput getSum) (collate cols')
---    where cols' = second getSum <$> cols
-fromExpr _ = error "not implemented"
+fromExpr (NamedGradient g) = gradientByName g
+fromExpr (Split gns) = splitGrads gns
+fromExpr (Combine f xs) = combineGrads (getBlendFunc f) =<< mapM fromExpr xs
+fromExpr (Collate cols) = Just $ collate cols
 
--- combineGrads :: (Gradient AlphaColour a -> Gradient AlphaColour a -> Gradient AlphaColour a) 
---             -> [Gradient AlphaColour a] -> Maybe (Gradient AlphaColour a)
-combineGrads f [] = Nothing
+combineGrads _ [] = Nothing
 combineGrads f [x] = Just x
 combineGrads f (x:xs) = Just $ foldl f x xs
 
@@ -132,40 +111,34 @@ splitGrads [] = Just $ constant mempty
 splitGrads ((g1, n1):gns) = adjacent n1 <$> g1' <*> splitGrads gns
   where g1' = fromExpr g1
 
--- getBlendFunc :: BlendFunction -> Gradient AlphaColour Double 
---              -> Gradient AlphaColour Double -> Gradient AlphaColour Double
 getBlendFunc Blend = blend 0.5
 getBlendFunc Overlay = (++)
 
---getTransFunc :: (Monoid m, Monoid n) => (m -> n) 
---getTransFunc Invert = invert
---getTransFunc (Exponent n) = onInput (** n)
---getTransFunc Reverse = onInput (1 -)
-
-
 --Colour scheme definitions.
-instance ColourScheme SourceCol where
-    type ColourData SourceCol = AlphaColour Double
-    type InputData  SourceCol = (Polynomial Int, Complex Double)
-    toColour _           = id
-    toData   ("1",l,o,g) = uncurry $ source1 l o g
-    toData   ("2",l,o,g) = uncurry $ source2 l o g
-    toData   _           = error "wrong method for source colouring"
+instance (Coefficient a) => ColourScheme (SourceCol a) where
+    type ColourData (SourceCol a) = AlphaColour Double
+    type InputData  (SourceCol a)= (Polynomial a, Complex Double)
+    toColour _         = id
+    toData   ("1",l,o) = uncurry $ source1 l o
+    toData   ("2",l,o) = uncurry $ source2 l o
+    toData   _         = error "wrong method for source colouring"
+    toCoord  _ (_,z)   = z
 
 instance ColourScheme DensityCol where
     type ColourData DensityCol = (Sum Double)
-    type InputData  DensityCol = (Polynomial Int, Complex Double)
-    toColour (g,_) = runGrad g . getSum
-    toData   (_,d) = uncurry $ density d
+    type InputData  DensityCol = (Complex Double)
+    toColour (spec,_) = runGrad (fromJust $ fromExpr spec) . getSum
+    toData   (_   ,d) = density d
+    toCoord  _ z      = z
 
---Density colouring.                                  
-density :: Double -> p -> r -> Sum Double
-density d _ _ = Sum d
+--Density colouring.
+density :: Double -> r -> Sum Double
+density d _ = Sum d
 
 --Colouring by source polynomial, "base n" and "scale factor" methods.
-source1, source2 :: (Coefficient a) => IterCoeffs a -> Double -> DGradient -> Polynomial a -> Complex Double -> (AlphaColour Double)
-source1 cfs o g p _ = dissolve o $ (runGrad g) (toGValue1 cfs p  )
-source2 cfs o g p r = dissolve o $ (runGrad g) (toGValue2 cfs p r)
+source1, source2 :: (Coefficient a) => IterCoeffs a -> Double -> Polynomial a -> Complex Double -> (AlphaColour Double)
+source1 cfs o p _ = flip withOpacity o $ hsv (toGValue1 cfs p  ) 1 1
+source2 cfs o p r = flip withOpacity o $ hsv (toGValue2 cfs p r) 1 1
 
 --------------------------------------------------------------------------------
 --Converting polynomials to values to be able to apply gradients.
@@ -185,12 +158,11 @@ convertCoeffs cfs dfs (c:cs) = case lookup c cfs' of
 toGValue1 :: (Coefficient a) => IterCoeffs a -> Polynomial a -> Double
 toGValue1 cfs p = z * evaluate p' z
     where d  = fromIntegral (length cfs) -1
-          p' = convertCoeffs cfs [0..d] (drop 1 p)
+          p' = convertCoeffs cfs [0..d] p
           z  = 1 / fromIntegral (length cfs)
 
 --This one should be used with gradients such that g(0)=g(1).
 --This uses the scale factors.
-toGValue2 :: (Coefficient a) => IterCoeffs a ->  Polynomial a -> Center -> Double
+toGValue2 :: (Coefficient a) => IterCoeffs a -> Polynomial a -> Center -> Double
 toGValue2 cfs p c = 0.5 + 1/(2*pi) * phase scale
     where scale = (negate . recip . (`evaluate` c)) $ derivative $ map toComplex p
-

@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeFamilies #-}
+
 module Roots where
 
 import Overture
@@ -102,8 +104,8 @@ getPolys (Config ic (rx, ry) d c w _) = canHaveRoots ic d cI
   where h = w * fromIntegral ry / fromIntegral rx
         cI = c +! ((-w/2) :+ (-h/2), (w/2) :+ (h/2))
 
-polyRoots :: (Coefficient a) => [Polynomial a] -> [RootPlot a]
-polyRoots polys = (\p -> map (RootPlot p) . findRoots $ p) =<< polys
+polyRoots :: (Coefficient a) => [Polynomial a] -> [(Polynomial a, Root)]
+polyRoots polys = (\p -> map (\r -> (p,r)) . findRoots $ p) =<< polys
 
-getRoots :: (Coefficient a) => Config c a -> [RootPlot a]
+getRoots :: (Coefficient a) => Config c a -> [(Polynomial a, Root)]
 getRoots cfg = polyRoots $ getPolys cfg

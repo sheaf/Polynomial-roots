@@ -67,4 +67,3 @@ clearArray z ar = do bds <- getBounds ar
                      mapM_ (flip (writeArray ar) z) (range bds)
 
 testInput (IOArrayRaster i o rbs ibs n ar) x = i x
-

@@ -23,17 +23,17 @@ import Data.Label.Pure
 
 import Types hiding (Config(..))
 import qualified Types as T
+import qualified Pair as P
+import Rendering.Coord
 
 type Height = Double
 
 data Settings = Settings { _resolution :: Resolution
-                         , _degree     :: Degree
                          , _center     :: Center
                          , _width      :: Width
                          }
 
 $(mkLabels [''Settings])
-
 
 aspect :: Settings -> Double
 aspect st = let (rx,ry) = get resolution st
@@ -62,8 +62,11 @@ getEnv l = get l <$> ask
 onFst = lens fst (\x (_, y) -> (x, y))
 onSnd = lens snd (\y (x, _) -> (x, y))
 
-envToConfig ic = do (Settings r d c w) <- ask
-                    return $ T.Config ic r d c w
+envToConfig ic d col = do (Settings r c w) <- ask
+                          return $ T.Config ic r d c w col
 
-cfgToSettings (T.Config _ r d c w _) = Settings r d c w
-
+specToSettings spec = Settings r c w
+    where render = head . get renders $ spec
+          c = uncurry (:+) . P.toTuple . getCd2 $ get windowCenter render
+          w = P.spFst . getCd2 $ get windowSize render
+          r = P.toTuple . getCd2 $ get outputSize render

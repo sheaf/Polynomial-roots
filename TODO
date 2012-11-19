@@ -1,42 +1,19 @@
 TODO:
 
-
-General:
-
-Unify different rendering schemes: use of Int or other coefficients,
-    and use of different colouring schemes, without recompiling.
-
-
-
 Computation:
-
 Optimise (better bounds, etc).
-Allow parallel evaluation and use of multiple cores.
-
-
-
-Trees:
-
-Rewrite to allow more general schemes (with different pruning methods).
-
-
-
-IFS:
-
-Make use of Trees rewrite to incorporate other IFS-like methods.
-Complete unification of different IFS methods, minimising code overlap.
-
-
 
 Parsing:
+Change pCd2 etc to allow both tuples and complex numbers.
+Cleanup gradients and gradients parsing: named or collated (+ others?).
+Add option to read in named colours as opposed to just hex values.
+Cleanup using roots/ifs, source/density, different coeffs... uniformly!
 
-Major rework of parsing needed. Some issues:
+Comments:
+Add comments everywhere!
 
-Error if no config file found.
-Explain config file specification.
-Make sure parsing works properly (as of now, can fail with no error message,
-    e.g. output-size being given a single argument).
-Proper parsing of all input (e.g. negative numbers...).
-Allow different coefficient sets (and different types, i.e. Int/Double/...).
-Allow parsing of gradients (with different methods).
-Parse different IFS modes (i.e. straight up sets of functions).
+IFS:
+Clean up.
+
+General:
+Flip y-axis in image routines.

@@ -1,5 +1,6 @@
 {-# LANGUAGE TypeFamilies, TypeSynonymInstances,
-             FlexibleContexts, FlexibleInstances, ExistentialQuantification #-}
+             FlexibleContexts, FlexibleInstances,
+             RankNTypes#-}
 module Types ( module Types
              , module Configuration
              , module Data.Complex
@@ -7,10 +8,12 @@ module Types ( module Types
 
 import Overture
 import Prelude ()
-import Rendering.Colour
+
+import Configuration hiding (center)
 import Data.Complex
-import Configuration hiding (center, Roots, IFS)
 import Data.Monoid
+import Data.Ratio
+import Rendering.Colour
 
 --------------------------------------------------------------------------------
 --Basic datatypes.
@@ -18,6 +21,7 @@ import Data.Monoid
 --Polynomials. Constant coefficient is the 0th term.
 --Have to be able to coerce coefficients into the complex numbers,
 --for polynomial evaluation.
+
 class (Eq a, Num a, Show a, Read a) => Coefficient a where
     toComplex :: a -> Complex Double
     toAbs     :: a -> Double
@@ -27,10 +31,10 @@ instance Coefficient Int where
     toComplex = fromIntegral
     toAbs     = abs . fromIntegral
     toReal    = Just <$> fromIntegral
-instance Coefficient Rational where
-    toComplex = fromRational
-    toAbs     = abs . fromRational
-    toReal    = Just <$> fromRational
+instance Coefficient Integer where
+    toComplex = fromIntegral
+    toAbs     = abs . fromIntegral
+    toReal    = Just <$> fromIntegral
 instance Coefficient Double where
     toComplex x = x :+ 0
     toAbs       = abs
@@ -39,11 +43,17 @@ instance Coefficient (Complex Double) where
     toComplex = id
     toAbs     = magnitude
     toReal    = const Nothing
+instance (Coefficient a, Integral a) => Coefficient (Ratio a) where
+    toComplex q = toComplex a / toComplex b
+        where (a,b) = (numerator q, denominator q)
+    toAbs     q = toAbs a / toAbs b
+        where (a,b) = (numerator q, denominator q)
+    toReal    q = (/) <$> toReal a <*> toReal b
+        where (a,b) = (numerator q, denominator q)
 
 --Polynomials as lists of coefficients.
 type Polynomial a = [a]
-data Coeffs       = CI Int | CD Double | CCD (Complex Double)
-type IterCoeffs a = [a] -- Change this!
+type IterCoeffs a = [a]
 
 instance (Coefficient a) => Num (Polynomial a) where
     a + b           = zipWith (+) a b
@@ -55,6 +65,7 @@ instance (Coefficient a) => Num (Polynomial a) where
     signum _        = error "No signum definition for Polynomial"
 
 --Root finding types.
+type Degree     = Int
 type RealBound  = Degree -> Double
 type Point      = Complex Double
 type Guess      = Complex Double
@@ -75,29 +86,25 @@ type Pixel      = (Int,Int)
 type Scaler a   = Complex Double -> Polynomial a -> Complex Double
 --Gradient as a monoid homomorphism into colour space.
 newtype Gradient m clr a = Grad { runGrad :: m -> clr a }
-type DGradient = Gradient Double AlphaColour Double
-data Mode = Roots | IFS | Both deriving (Eq, Ord, Read, Show)
-data Config c a = (ColourScheme c, Coefficient a) =>
-                          Config 
-                          { coefficients :: [a]
-                          , resolution   :: Resolution
-                          , degree       :: Degree
-                          , center       :: Center
-                          , width        :: Width
-                          , colouring    :: c
-                          }
+
+data Config c a = Config { coefficients :: [a]
+                         , resolution   :: Resolution
+                         , degree       :: Degree
+                         , center       :: Center
+                         , width        :: Width
+                         , colouring    :: c
+                         }
 
 --Colouring schemes.
-type SourceCol  = (String, [Int], Double, DGradient) --allow other lists than [Int]
-type DensityCol = (DGradient, Double)
-
-type Colouring = Either SourceCol DensityCol
+type SourceCol  a = (String, [a], Double) --method, coefficients, opacity
+type DensityCol   = (GradientSpec, Double) --gradient, density
 
 class (Monoid (ColourData c)) => ColourScheme c where
     type ColourData c :: *
     type InputData  c :: *
     toColour :: c -> (ColourData c) -> AlphaColour Double
-    toData :: c -> InputData c -> ColourData c
+    toData   :: c -> InputData c -> ColourData c
+    toCoord  :: c -> InputData c -> Complex Double
 
 --------------------------------------------------------------------------------
 --Basic functions.

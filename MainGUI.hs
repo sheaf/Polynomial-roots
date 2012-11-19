@@ -69,7 +69,7 @@ renderPixel c surf (xy, v) = do let bg = flip over black $ (toColour c) mempty
 
 mainLoop :: (Rasterizer r, ColourScheme c, m ~ ColourData c, RstContext r ~ IO) 
          => [i] -> r v i m -> c -> EnvIO ()
-mainLoop xs rst g = do xs' <- withMinDelay 10 (timedDraw g rst 10 xs)
+mainLoop xs rst g = do xs' <- withMinDelay 5 (timedDraw g rst 5 xs)
                        handleEvents xs' rst g =<< liftIO newEvents
 
 handleEvents :: (Rasterizer r, ColourScheme c, m ~ ColourData c, RstContext r ~ IO) 
@@ -117,7 +117,6 @@ withMinDelay dt x = do t1 <- liftIO SDL.getTicks
 delayUntil t = do cur <- SDL.getTicks
                   when (cur < t) (SDL.delay $ t - cur)
 
-
 timedDraw :: (Rasterizer r, RstContext r ~ IO, ColourScheme c, m ~ ColourData c) 
           => c -> r v i m -> Time -> [i] -> EnvIO [i]
 timedDraw _ _ _ [] = return []
@@ -136,4 +135,3 @@ untilTime f t (x:xs) y = do f y x
 
 newEvents :: IO [Event]
 newEvents = unfoldActionM (justIf (/= NoEvent) <$> SDL.pollEvent)
-
