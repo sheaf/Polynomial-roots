@@ -8,17 +8,9 @@ a set of coefficients A and a degree d, this plots all roots of polynomials of d
 with coefficients in A, within the region R.
 
 - IFS.
-This plots the corresponding iterated function systems, and tries to predict the scale factors
-to make it look like the corresponding plot of roots.
+This plots the corresponding iterated function systems, and tries to scale them
+to make them look like the corresponding plot of roots.
 
 
-The program can parse options at runtime, otherwise it takes in a config file,
-such as the following (no blank line at the beginning):
-
-run-mode: gui
-render: roots 28{
-center: 0.1275 0.7000  
-size: 0.001 0.001
-output-size: 400 400
-fix-aspect: None
-gradient: warm}
+The program parses options from the configuration file "roots.config".
+A sample configuration file is available.
