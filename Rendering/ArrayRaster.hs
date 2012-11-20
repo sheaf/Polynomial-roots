@@ -36,6 +36,8 @@ instance Rasterizer IOArrayRaster where
                           writeArray ar xy v'
                           modifyIORef n (+ 1)
                           count <- readIORef n
+                          when (count == 1) $
+                            putStrLn "Beginning to plot points."
                           when (mod count 400000 == 0) $ 
                             putStrLn (show count ++ " points plotted...")
                           return (xy, g v')
