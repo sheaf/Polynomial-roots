@@ -105,23 +105,3 @@ class (Monoid (ColourData c)) => ColourScheme c where
     toColour :: c -> (ColourData c) -> AlphaColour Double
     toData   :: c -> InputData c -> ColourData c
     toCoord  :: c -> InputData c -> Complex Double
-
---------------------------------------------------------------------------------
---Basic functions.
-
-evaluate :: (Coefficient a, b ~ a) => Polynomial a -> b -> b
-evaluate (a:as) z = a + z * evaluate as z
-evaluate [] _ = 0
-
-derivative :: Coefficient a => Polynomial a -> Polynomial a
-derivative = zipWith (*) (map fromIntegral [1..]) . drop 1
-
---A bit dodgy, but useful.
-filterClose :: Coefficient a => ErrorBound -> [a] -> [a]
-filterClose _ [] = []
-filterClose eps (c:cs) = filterClose' eps cs [c]
-    where filterClose' _ [] bs = bs
-          filterClose' eps' (a:as) bs
-              | good = filterClose' eps' as (bs++[a])
-              | otherwise = filterClose' eps' as bs
-                   where good = all (> eps') (map (\b -> toAbs (b-a)) bs)

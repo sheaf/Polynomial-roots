@@ -4,10 +4,12 @@ module IFS where
 
 import Overture
 import Prelude ()
-import Types
-import Plotting
+
 import Interval
+import Plotting
+import Polynomials
 import Roots
+import Types
 
 --------------------------------------------------------------------------------
 --IFS plotting.
@@ -16,20 +18,6 @@ toifs :: (Coefficient a) => IterCoeffs a -> Point -> IFS
 toifs coeffs c = (toifs' coeffs c, [c])
     where toifs' coeffs' c' z = map ((\cf -> cf*z*c' + 1) . toComplex) coeffs'
         --two normalisations, z -> (cf z c + 1) and z -> (zc + cf)
-
-
---Two somewhat outdated routines, computing global scale factors...
-scaleFactors :: (Coefficient a) => Config c a -> [Complex Double]
-scaleFactors (Config ic _ d c eps _) = 
-                filterClose 0.1 allscalings
-                         -- ^^ random constant, tweaking necessary
-    where allscalings = (map $ (negate . recip . (`evaluate` c)) . derivative . map toComplex) (canHaveRoots ic d cI)
-          cI = c +! ((-eps):+(-eps),eps:+eps)
-
-getScales :: (Coefficient a) => Config c a -> [Complex Double]
-getScales (Config ic (rx,ry) d c w g) = scales
-  where scales = scaleFactors (Config ic (rx,ry) (d+8) c (w/ fromIntegral rx) g)  
-            -- bear in mind scaleFactors uses w as an error bound...
 
 scalePoint :: (Coefficient a) => Complex Double -> Scaler a -- Scaler a ~ (Complex Double -> Polynomial a -> Complex Double)
 scalePoint c z p = z * scale
@@ -53,9 +41,8 @@ ifsCounts scales ifs (Config _ res d _ _ _) = points
 
 ifsPoints :: (Coefficient a) => Config c a -> [(Polynomial a, Root)]
 ifsPoints cfg@(Config ic (rx,ry) d c w g) = ifspoints
-  where --scales = getScales cfg
-        --ifs = toifs ic c
-        --ifspoints = ifsCounts scales ifs (Config ic (rx,ry) (d+1) c w g)
+  where --ifs = toifs ic c
+        --ifspoints = ifsCounts [1] ifs cfg
         h = (w* fromIntegral(ry) / (fromIntegral(rx)))::Double
         cI = c +! ((-w/2) :+ (-h/2),(w/2) :+ (h/2))
         --cI = ((-8):+(-8),8:+8) --no cheating, don't do any pruning!

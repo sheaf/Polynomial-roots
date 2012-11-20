@@ -4,9 +4,12 @@ module Interval where
 
 import Overture
 import Prelude ()
-import Types
-import Data.Maybe
+
 import Control.Applicative
+import Data.Maybe
+
+import Polynomials
+import Types
 
 --------------------------------------------------------------------------------
 --Interval arithmetic.
@@ -171,15 +174,9 @@ absD (c,r) = (mini,maxi)
           maxi = magnitude(c) + r
 
 --------------------------------------------------------------------------------
+--Evaluation of polynomials on intervals.
 
---Gives the coefficients of the taylor expansion of p centered at c.
-taylor :: (Coefficient a, Fractional a) => 
-          Polynomial a -> a -> Polynomial a
-taylor p c = zipWith (/) derivs facts 
-            where derivs = map (`evaluate` c) $ takeWhile (not.null) $ iterate derivative p
-                  facts = map fromIntegral $ scanl (*) 1 [1..]
-
---Evaluation of polynomials on intervals, using Horner scheme.
+--Evaluation using Horner scheme method.
 evaluateI :: (Coefficient a, Interval b, a ~ Scalar b)
              => Polynomial a -> b -> b
 evaluateI (a:as) z = a +! (z * evaluateI as z)

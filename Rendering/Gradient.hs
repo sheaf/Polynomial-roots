@@ -5,12 +5,15 @@ module Rendering.Gradient where
 
 import Overture
 import Prelude ()
+
 import Control.Arrow(first,second)
 import Data.Colour.Names
+import Data.List(lookup)
 import Data.Maybe
 import Data.Monoid
+
+import Polynomials
 import Rendering.Colour
-import Data.List(lookup)
 import Types
 
 apGrad :: m -> Gradient m f a -> f a
