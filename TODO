@@ -20,6 +20,10 @@ Add comments everywhere, with documentation.
 Roots:
 Add scale factor utility in some form.
 
+Plotting:
+Make sure giving different centres (etc) for runspec/mode gives reasonable results.
+
 General:
+Command line parameter to determine output file.
 Flip y-axis in image routines.
 Cleanup using roots/ifs, source/density, different coeffs... uniformly!
