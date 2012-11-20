@@ -50,7 +50,8 @@ onInput f g = Grad { runGrad =  runGrad g . f }
 onOutput :: (f a -> g a) -> Gradient m f a -> Gradient m g a
 onOutput f = Grad . (f .) . runGrad
 
-invert, square, squareRoot :: Gradient Double f a -> Gradient Double f a
+reverseGrad, invert, square, squareRoot :: Gradient Double f a -> Gradient Double f a
+reverseGrad = onInput (\x -> 1-x)
 invert = onInput recip
 square = onInput (^ 2)
 squareRoot = onInput sqrt
@@ -100,6 +101,7 @@ hsvGrad o = Grad { runGrad = hsvGrad' o }
 
 gradientByName' :: String -> (Double -> Gradient Double AlphaColour Double)
 gradientByName' "warm"   = warm
+gradientByName' "mraw"   = reverseGrad . warm
 gradientByName' "cold"   = cold
 gradientByName' "sunset" = sunset
 gradientByName' "hsv"    = hsvGrad
@@ -109,7 +111,7 @@ gradientByName (s,d) = case d of
                             Just d' -> Just $ gradientByName' s d'
                             Nothing -> Just $ gradientByName' s 1
 
-gradientNames = ["warm", "cold", "sunset", "hsv"]
+gradientNames = ["warm", "mraw", "cold", "sunset", "hsv"]
 
 gradientFromSpec def bg gSpec = opacify bg $ fromExpr gSpec ?? def
 

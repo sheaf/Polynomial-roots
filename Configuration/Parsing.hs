@@ -33,8 +33,8 @@ instance PCoefficient Integer where
     pCoeff = pInt
 instance PCoefficient Double where
     pCoeff = pDouble
-instance PCoefficient (Complex Double) where
-    pCoeff = uncurry (:+) <$> pPair pDouble
+instance (Coefficient a, RealFloat a, PCoefficient a) => PCoefficient (Complex a) where
+    pCoeff = pComplex pCoeff
 instance (PCoefficient a, Integral a) => PCoefficient (Ratio a) where
     pCoeff = pRatio pCoeff
 
@@ -183,19 +183,24 @@ pGradCollate = Collate <$> pList (pTuple pColour pDouble)
 
 pColour :: (Monad m) => ParsecT String u m (AlphaColour Double)
 pColour = do pString "#"
-             hex <- count 6 (oneOf "0123456789ABCDEF")
-             return $ colourFromHex hex
+             hex   <- count 6 (oneOf hexDigits)
+             alpha <- option "FF" $ count 2 (oneOf hexDigits)
+             return $ colourFromHex hex alpha
+             <?> "hexadecimal colour"
              --todo: add option for reading colour names instead
-                 where colourFromHex :: String -> AlphaColour Double
-                       colourFromHex hex = opaque $ sRGB r g b
+                 where hexDigits = "0123456789ABCDEF"
+                       colourFromHex :: String -> String -> AlphaColour Double
+                       colourFromHex hex alpha = sRGB r g b `withOpacity` a
                            where r' = take 2 hex
                                  g' = take 2 (drop 2 hex)
                                  b' = take 2 (drop 4 hex)
-                                 [r,g,b] = map go [r',g',b']
+                                 a' = alpha
+                                 [r,g,b,a] = map go [r',g',b',a']
                                     where go x = fromJust . read $ "0x" ++ x
 
 pCd2 :: (Monad m) => ParsecT String u m a -> ParsecT String u m (Cd2 a)
 pCd2 p = mkCd2 <$> p <*> p
+         <?> "two values"
 
 pTuple :: (Monad m) => ParsecT String u m a -> ParsecT String u m b -> ParsecT String u m (a,b)
 pTuple p q = do pString "("
@@ -208,6 +213,7 @@ pTuple p q = do pString "("
                 spaces
                 pString ")"
                 return (a,b)
+                <?> "pair"
 
 pPair p = pTuple p p
 
@@ -216,12 +222,14 @@ pRatio p = do n <- p
               pString "/"
               d <- p
               return $ n % d
+              <?> "rational number"
 
 pList :: (Monad m) => ParsecT String u m a -> ParsecT String u m [a]
 pList p = do pString "["
              list <- p `sepBy` (pString ",")
              pString "]"
              return list
+             <?> "list"
 
 pEnumerated :: (Monad m, Enum a, Bounded a, Show a) => ParsecT String u m a
 pEnumerated = pByShow enumerate
@@ -236,13 +244,37 @@ pStrings :: (Monad m) => [String] -> ParsecT String u m String
 pStrings strs = choice (map (try . pString) strs)
 
 pInt :: (Monad m, Integral a, Read a) => ParsecT String u m a
-pInt = pGenToken intVal
+pInt = pGenToken intVal <?> "integer"
 
 pNat :: (Monad m) => ParsecT String u m Int
-pNat = pGenToken natVal
+pNat = pGenToken natVal <?> "natural number"
 
 pDouble :: (Monad m) => ParsecT String u m Double
-pDouble = pGenToken doubleVal
+pDouble = pGenToken doubleVal <?> "double"
+
+pComplex :: (Monad m, Num a, RealFloat a) 
+         => ParsecT String u m a -> ParsecT String u m (Complex a)
+pComplex p = do s1 <- option id pm
+                z1 <- q
+                z2 <- option (0 :+ 0) q'
+                return $ s1 z1 + z2
+                <?> "complex number"
+                    where q = do try $ do pString "i"
+                                          choice [ pm *> return (0:+1)
+                                                 , (0 :+) <$> option 1 p]
+                                 <|> ( try $ do z <- (0 :+) <$> option 1 p
+                                                pString "i"
+                                                return z )
+                                 <|> (:+ 0) <$> p
+                          q' = do s <- pm
+                                  s <$> q
+
+pm :: (Monad m, Num a) => ParsecT String u m (a -> a)
+pm = do s <- pStrings ["+","-"]
+        return $ case s of
+                      "+" -> id
+                      "-" -> negate
+       <?> "sign"
 
 pName :: (Monad m) => ParsecT String u m String
 pName = pGenToken nameToken
