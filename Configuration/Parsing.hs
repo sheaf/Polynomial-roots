@@ -117,10 +117,12 @@ pSourceCol pCf = do many newline
                     coeffs <- pField "coefficients" *> pList pCf
                     pFieldSep
                     op <- pField "opacity" *> pDouble
+                    pFieldSep
+                    t <- pField "truncate" *> pNat
                     optional $ pFieldSep
                     many newline
                     pString "}"
-                    return (method, coeffs, op)
+                    return (method, coeffs, op, t)
 
 pFieldSep :: (Monad m) => ParsecT String u m String
 pFieldSep = many1 pNewline

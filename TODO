@@ -12,7 +12,8 @@ Cleanup gradient parsing.
 Give helpful error messages for parsing pairs, lists, etc.
 
 Colouring:
-Fix source colouring coefficient matching method
+Fix source colouring coefficient matching method.
+Allow additional gradient with source colouring (instead of just hsv).
 
 Comments:
 Add comments everywhere, with documentation.

@@ -121,11 +121,11 @@ getBlendFunc Overlay = (++)
 instance (Coefficient a) => ColourScheme (SourceCol a) where
     type ColourData (SourceCol a) = AlphaColour Double
     type InputData  (SourceCol a)= (Polynomial a, Complex Double)
-    toColour _         = id
-    toData   ("1",l,o) = uncurry $ source1 l o
-    toData   ("2",l,o) = uncurry $ source2 l o
-    toData   _         = error "wrong method for source colouring"
-    toCoord  _ (_,z)   = z
+    toColour _           = id
+    toData   ("1",l,o,t) = \(p,r) -> source1 l o (drop t p) r
+    toData   ("2",l,o,t) = \(p,r) -> source2 l o (drop t p) r
+    toData   _           = error "wrong method for source colouring"
+    toCoord  _ (_,z)     = z
 
 instance ColourScheme DensityCol where
     type ColourData DensityCol = (Sum Double)

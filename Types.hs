@@ -97,8 +97,8 @@ data Config c a = Config { coefficients :: [a]
                          }
 
 --Colouring schemes.
-type SourceCol  a = (String, [a], Double) --method, coefficients, opacity
-type DensityCol   = (GradientSpec, Double) --gradient, density
+type SourceCol  a = (String, [a], Double, Int) --method, coefficients, opacity, truncation
+type DensityCol   = (GradientSpec, Double)     --gradient, density
 
 class (Monoid (ColourData c)) => ColourScheme c where
     type ColourData c :: *
