@@ -54,7 +54,7 @@ endSDL = liftIO SDL.quit
 
 runMainLoop :: (Foldable f, ColourScheme c, m ~ ColourData c, Rasterizer r, RstContext r ~ IO) 
             => f i -> r v i m -> c -> EnvIO ()
-runMainLoop xs rst g = mainLoop (toList xs) rst g
+runMainLoop xs = mainLoop (toList xs)
 
 drawPixel :: (Rasterizer r, RstContext r ~ IO, ColourScheme c, m ~ ColourData c) 
             => r v i m -> c -> SDL.Surface -> i -> IO ()
@@ -103,7 +103,7 @@ handleKeys _ _ _ = return ()
 dumpGUIImage rst g = do fn <- nextImageName $ mkImageName <$> [1..]
                         putStrLn $ "Saving to image: " ++ fn
                         dumpImage rst g fn
-                        putStrLn $ "Image saved."
+                        putStrLn "Image saved."
   where mkImageName n = "gui_dump_" ++ show n ++ ".png"
         nextImageName (n:ns) = do exists <- doesFileExist n
                                   if exists then nextImageName ns else return n

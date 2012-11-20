@@ -9,6 +9,7 @@ module Main where
 
 import Overture hiding(fst,snd)
 import Prelude ()
+import qualified Prelude as P
 
 import Control.Exception(IOException,handle)
 import Data.Foldable (Foldable, toList)
@@ -16,7 +17,7 @@ import Data.Maybe
 import System.Environment(getArgs)
 import System.IO
 import Text.Parsec hiding(many, optional)
-import qualified Text.Parsec as P
+import qualified Text.Parsec as TP
 
 import qualified Configuration as C
 import Configuration.Parsing
@@ -54,8 +55,8 @@ data RootsDensityMode a = RootsDensityMode
 instance (PCoefficient a) => Mode (IFSDensityMode a) where
     type ModeColour (IFSDensityMode a) = DensityCol
     type ModeConfig (IFSDensityMode a) = Config DensityCol a
-    getInputData = const ((map (\(a,b) -> b)) . ifsPoints)
-    getib = const (\ (Config _ _       _ c w _ _) -> let wC = (w/2) :+ (w/2) 
+    getInputData _ = (map P.snd) . ifsPoints
+    getib _ = (\ (Config _ _       _ c w _ _) -> let wC = (w/2) :+ (w/2) 
                                                    in (pair mkCd2 (0 - wC), pair mkCd2 (0 + wC)))
     extractCol _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig _ = pModeConfig pDensityCol
@@ -63,8 +64,8 @@ instance (PCoefficient a) => Mode (IFSDensityMode a) where
 instance (PCoefficient a) => Mode (IFSSourceMode a) where
     type ModeColour (IFSSourceMode a) = SourceCol a
     type ModeConfig (IFSSourceMode a) = Config (SourceCol a) a
-    getInputData = const ifsPoints
-    getib = const (\ (Config _ _       _ c w _ _) -> let wC = (w/2) :+ (w/2) 
+    getInputData _ = ifsPoints
+    getib _ = (\ (Config _ _       _ c w _ _) -> let wC = (w/2) :+ (w/2) 
                                                    in (pair mkCd2 (0 - wC), pair mkCd2 (0 + wC)))
     extractCol _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig _ = pModeConfig (pSourceCol pCoeff)
@@ -72,8 +73,8 @@ instance (PCoefficient a) => Mode (IFSSourceMode a) where
 instance (PCoefficient a) => Mode (RootsSourceMode a) where
     type ModeColour (RootsSourceMode a) = SourceCol a
     type ModeConfig (RootsSourceMode a) = Config (SourceCol a) a
-    getInputData = const getRoots
-    getib = const (\ (Config _ _       _ c w _ _) -> let wC = (w/2) :+ (w/2) 
+    getInputData _ = getRoots
+    getib _ = (\ (Config _ _       _ c w _ _) -> let wC = (w/2) :+ (w/2) 
                                                    in (pair mkCd2 (c - wC), pair mkCd2 (c + wC)))
     extractCol _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig _ = pModeConfig (pSourceCol pCoeff)
@@ -81,8 +82,8 @@ instance (PCoefficient a) => Mode (RootsSourceMode a) where
 instance (PCoefficient a) => Mode (RootsDensityMode a) where
     type ModeColour (RootsDensityMode a) = DensityCol
     type ModeConfig (RootsDensityMode a) = Config DensityCol a
-    getInputData = const (map (\(a,b) -> b) . getRoots)
-    getib = const (\ (Config _ _       _ c w _ _) -> let wC = (w/2) :+ (w/2) 
+    getInputData _ = (map P.snd) . getRoots
+    getib _ = (\ (Config _ _       _ c w _ _) -> let wC = (w/2) :+ (w/2) 
                                                    in (pair mkCd2 (c - wC), pair mkCd2 (c + wC)))
     extractCol _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig _ = pModeConfig pDensityCol
@@ -159,8 +160,8 @@ pAnyMode = do manyTill anyChar (try $ newline *> pString "mode")
               mode <- pField "" *> ((,,) <$> choice [pString "roots", pString "ifs"] 
                                          <*> choice [pString "source", pString "density"]
                                          <*> choice [pString "int", pString "double", pString "complex", pString "rational"])
-              P.optional $ pFieldSep
-              P.many newline
+              TP.optional pFieldSep
+              TP.many newline
               pString "{"
               let mode' = case mode of
               --sorry!!
@@ -184,7 +185,7 @@ pAnyMode = do manyTill anyChar (try $ newline *> pString "mode")
 
 modeConfigFromMode :: String -> AnyMode -> IO(Either String AnyConfig)
 modeConfigFromMode fn (AnyMode mode) = do
-    cfg <- (runParse (parseConfig mode) fn =<< readFile fn)
+    cfg <- runParse (parseConfig mode) fn =<< readFile fn
     let res = case cfg of
                    Left s    -> Left s
                    Right cfg -> Right (AnyConfig mode cfg (extractCol mode cfg))
@@ -203,12 +204,12 @@ main = do
     putStrLn "This program produces images of polynomial roots."
     putStrLn "Reading configuration from file 'roots.config'."
     let fn = "roots.config"
-    spec <- (runParse (pRunSpec) fn =<< readFile fn)
-    mode <- (runParse pAnyMode fn =<< readFile fn)
+    spec <- runParse pRunSpec fn =<< readFile fn
+    mode <- runParse pAnyMode fn =<< readFile fn
     case (spec, mode) of
          (Left s,_) -> writeError s
          (_,Left s) -> writeError s
-         (Right rspec, Right rmode) -> do cfg <- (modeConfigFromMode fn rmode)
+         (Right rspec, Right rmode) -> do cfg <- modeConfigFromMode fn rmode
                                           case cfg of
                                                Left s     -> writeError s
                                                Right rCfg -> mkFromConfig' rCfg rspec

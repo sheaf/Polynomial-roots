@@ -65,7 +65,7 @@ findRoots p
 companion :: (M.Element a, Storable a, Coefficient a) 
           => Polynomial a -> M.Matrix a
 companion p = M.fromColumns vcols
-    where n = (length p)-1
+    where n = length p - 1
           p' = map negate $ take n p
           cols = companion' n ++ [p']
           vcols = map V.fromList cols
@@ -75,29 +75,10 @@ companion' :: Num a => Int -> [[a]]
 companion' 1 = [[]]
 companion' 2 = [[0,1]]
 companion' n = nxt $ companion' (n-1)
-    where nxt (l:ls) = (l ++ [0]) : (map (0:) (l:ls))
+    where nxt (l:ls) = (l ++ [0]) : map (0:) (l:ls)
 
 --------------------------------------------------------------------------------
 --Plotting sets of roots.
-
-{- Outdated code.
-   Evaluates the polynomials at pixel-wide complex intervals,
-   and returns how many of the resulting complex intervals contain 0.
-   Produces blocky "spread out" versions of the real images.
-   Can be useful to provably eliminate roots occurring in certain regions.
-
-colourFunction' :: (Coefficient a) => 
-                   [Polynomial a] -> Config a ->  Pixel -> Colour
-colourFunction' polys (Config _ (rx,ry) w c (grad,_)) (px,py) = col
-    where cI = (((realPart c -w/2):+ (imagPart c -h/2)),
-                ((realPart c +w/2):+ (imagPart c +h/2)))
-          h = w * ry'/rx'
-          roots = filter (\pol -> 0 `elemI` (evaluateI pol pI)) polys
-          pI = (((px'-0.5)*w/rx':+(py'-0.5)*h/ry'),
-                ((px'+0.5)*w/rx':+(py'+0.5)*h/ry')) !+ (fst cI)
-          [px',py',rx',ry'] = map (fromIntegral) [px,py,rx,ry]
-          col = grad (length roots)
--}
 
 getPolys :: (Coefficient a) => Config c a -> [Polynomial a]
 getPolys (Config ic (rx, ry) d c w _ _) = canHaveRoots ic d cI

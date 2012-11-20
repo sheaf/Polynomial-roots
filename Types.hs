@@ -57,11 +57,11 @@ type IterCoeffs a = [a]
 
 instance (Coefficient a) => Num (Polynomial a) where
     a + b           = zipWith (+) a b
-    negate p        = map negate p
+    negate          = map negate
     (a:as) * (b:bs) = [a*b] + (0 : map (a*) bs) + (0: map (*b) as) + (0 : 0 : (as*bs))
     _ * _           = []
     fromInteger n   = [fromInteger n]
-    abs p           = map abs p
+    abs             = map abs
     signum _        = error "No signum definition for Polynomial"
 
 --Root finding types.
@@ -103,6 +103,6 @@ type DensityCol   = (GradientSpec, Double) --gradient, density
 class (Monoid (ColourData c)) => ColourScheme c where
     type ColourData c :: *
     type InputData  c :: *
-    toColour :: c -> (ColourData c) -> AlphaColour Double
-    toData   :: c -> InputData c -> ColourData c
-    toCoord  :: c -> InputData c -> Complex Double
+    toColour :: c -> ColourData c -> AlphaColour Double
+    toData   :: c -> InputData  c -> ColourData c
+    toCoord  :: c -> InputData  c -> Complex Double

@@ -6,5 +6,9 @@
 *.ini
 *.config
 *.prof
+*.hp
+*.ps
+*.aux
+*.html
 Main
 dist

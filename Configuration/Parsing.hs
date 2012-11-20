@@ -32,7 +32,7 @@ instance PCoefficient Integer where
 instance PCoefficient Double where
     pCoeff = pDouble
 instance PCoefficient (Complex Double) where
-    pCoeff = (uncurry (:+)) <$> (pPair pDouble)
+    pCoeff = uncurry (:+) <$> pPair pDouble
 instance (PCoefficient a, Integral a) => PCoefficient (Ratio a) where
     pCoeff = pRatio pCoeff
 
@@ -66,7 +66,7 @@ pRenderSpec = do pString "{"
                  sz <- pField "output-size" *> pCd2 pInt
                  pFieldSep
                  fixAsp <- pField "fix-aspect" *> pEnumerated
-                 optional $ pFieldSep
+                 optional pFieldSep
                  pString "}"
                  spaces
                  return $ RenderSpec rSpec Nothing sz fixAsp
@@ -91,7 +91,7 @@ pModeConfig p = do manyTill anyChar (try (newline *> string "mode"))
                    pString "colouring"
                    many newline
                    col <- p
-                   optional $ pFieldSep
+                   optional pFieldSep
                    many newline
                    pString "}"
                    return (Config cfs res deg ctr w s col)
@@ -103,16 +103,16 @@ pDensityCol = do many newline
                  grad <- pField "gradient" *> pGradSpec
                  pFieldSep
                  op <- pField "density" *> pDouble
-                 optional $ pFieldSep
+                 optional pFieldSep
                  many newline
                  pString "}"
-                 return $ (grad, op)
+                 return (grad, op)
 
 pSourceCol :: (Monad m) => ParsecT String u m a -> ParsecT String u m (SourceCol a)
 pSourceCol pCf = do many newline
                     pString "{"
                     many newline
-                    method <- (pField "method" *> pStrings ["1","2"])
+                    method <- pField "method" *> pStrings ["1","2"]
                     pFieldSep
                     coeffs <- pField "coefficients" *> pList pCf
                     pFieldSep
@@ -120,7 +120,7 @@ pSourceCol pCf = do many newline
                     optional $ pFieldSep
                     many newline
                     pString "}"
-                    return $ (method, coeffs, op)
+                    return (method, coeffs, op)
 
 pFieldSep :: (Monad m) => ParsecT String u m String
 pFieldSep = many1 pNewline
@@ -261,12 +261,12 @@ nameToken = quotedName <|> try unQName
 quotedName = between' (char '"') unQName
 unQName = do n <- rawNameToken 
              if isKeyword n then unexpected ("keyword " ++ n) else return n
-rawNameToken = ((:) <$> letter <*> many nameChar)
+rawNameToken = (:) <$> letter <*> many nameChar
 
 intVal :: (Monad m, Integral a, Read a) => ParsecT String u m a
 intVal = do pm <- option ' ' (oneOf "+-")
             ns <- many1 digit
-            return (fromJust . read $ [pm] ++ ns)
+            return $ fromJust . read $ pm : ns
 
 natVal :: (Monad m) => ParsecT String u m Int
 natVal = fromJust . read <$> many1 digit
@@ -275,7 +275,7 @@ doubleVal :: (Monad m) => ParsecT String u m Double
 doubleVal = do pm  <- option ' ' (oneOf "+-")
                ds1 <- many1 digit
                ds2 <- option [] (char '.' *> (('.':) <$> many1 digit))
-               return (fromJust . read $ [pm] ++ ds1 ++ ds2)
+               return $ fromJust . read $ pm : (ds1 ++ ds2)
 
 insensitiveString :: (Monad m) => String -> ParsecT String u m String
 insensitiveString str = try (mapM insensitiveChar str)

@@ -92,7 +92,7 @@ sunset = collateOpaque [(black,0),(purple,1/5),(firebrick,2/5),(goldenrod,1/2)
                        ,(orange,3/5),(white,1)]
 
 monochrome' = constant (opaque white)
-monochrome = Just $ Grad { runGrad = runGrad monochrome'}
+monochrome = Just Grad { runGrad = runGrad monochrome'}
 
 gradientByName "warm"        = Just warm
 gradientByName "cold"        = Just cold
@@ -152,8 +152,8 @@ source2 cfs o p r = flip withOpacity o $ hsv (toGValue2 cfs p r) 1 1
 convertCoeffs :: (Coefficient a, Coefficient b) => [a] -> [b] -> Polynomial a -> Polynomial b 
 convertCoeffs _ _ [] = []
 convertCoeffs cfs dfs (c:cs) = case lookup c cfs' of
-                                    Nothing -> error "couldn't look up coeff; possible rounding error"
-                                    Just cf' -> cf':(convertCoeffs cfs dfs cs)
+                                    Nothing  -> error "couldn't look up coeff; possible rounding error"
+                                    Just cf' -> cf' : convertCoeffs cfs dfs cs
     where cfs' = zipWith (\x y -> (y,x)) dfs cfs
 
 --Note: colouring depends on the order of the coefficients.
