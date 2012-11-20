@@ -2,18 +2,19 @@ TODO:
 
 Computation:
 Optimise (better bounds, etc).
+Add parallelisation.
 
 Parsing:
 Change pCd2 etc to allow both tuples and complex numbers.
-Cleanup gradients and gradients parsing: named or collated (+ others?).
 Add option to read in named colours as opposed to just hex values.
-Cleanup using roots/ifs, source/density, different coeffs... uniformly!
+Make parsing more consistent and make sure it always works.
 
 Comments:
-Add comments everywhere!
+Add comments everywhere, with documentation.
 
 Roots:
 Add scale factor utility in some form.
 
 General:
 Flip y-axis in image routines.
+Cleanup using roots/ifs, source/density, different coeffs... uniformly!
