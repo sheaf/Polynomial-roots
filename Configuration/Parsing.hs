@@ -88,7 +88,9 @@ pModeConfig p = do manyTill anyChar (try (newline *> string "mode"))
                    s <- pField "scaling" *> pScaling
                    pFieldSep
                    many newline
-                   col <- pField "colouring" *> p
+                   pString "colouring"
+                   many newline
+                   col <- p
                    optional $ pFieldSep
                    many newline
                    pString "}"
@@ -110,7 +112,7 @@ pSourceCol :: (Monad m) => ParsecT String u m a -> ParsecT String u m (SourceCol
 pSourceCol pCf = do many newline
                     pString "{"
                     many newline
-                    method <- (:[]) <$> (pField "method" *> oneOf "12")
+                    method <- (pField "method" *> pStrings ["1","2"])
                     pFieldSep
                     coeffs <- pField "coefficients" *> pList pCf
                     pFieldSep
