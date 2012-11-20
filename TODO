@@ -8,6 +8,7 @@ Parsing:
 Change pCd2 etc to allow both tuples and complex numbers.
 Add option to read in named colours as opposed to just hex values.
 Make parsing more consistent and make sure it always works.
+Cleanup gradient parsing.
 
 Comments:
 Add comments everywhere, with documentation.
