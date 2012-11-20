@@ -100,7 +100,7 @@ colourFunction' polys (Config _ (rx,ry) w c (grad,_)) (px,py) = col
 -}
 
 getPolys :: (Coefficient a) => Config c a -> [Polynomial a]
-getPolys (Config ic (rx, ry) d c w _) = canHaveRoots ic d cI
+getPolys (Config ic (rx, ry) d c w _ _) = canHaveRoots ic d cI
   where h = w * fromIntegral ry / fromIntegral rx
         cI = c +! ((-w/2) :+ (-h/2), (w/2) :+ (h/2))
 

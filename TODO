@@ -12,8 +12,8 @@ Cleanup using roots/ifs, source/density, different coeffs... uniformly!
 Comments:
 Add comments everywhere!
 
-IFS:
-Clean up.
+Roots:
+Add scale factor utility in some form.
 
 General:
 Flip y-axis in image routines.

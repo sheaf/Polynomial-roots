@@ -24,7 +24,7 @@ scalePoint c z p = z * scale
     where scale = (negate . recip . (`evaluate` c)) . derivative . map toComplex $ p
 
 ifsCheatCounts :: (Coefficient a) => Config c a -> Scaler a -> [Polynomial a] -> [(Polynomial a, Root)]
-ifsCheatCounts (Config _ _ _ c _ _) f ps = points
+ifsCheatCounts (Config _ _ _ c _ _ _) f ps = points
     where points = map (\p -> (p,f (flip evaluate c . map toComplex $ p) p)) ps
 
 ifsIterates :: Iterations -> IFS -> [Complex Double]
@@ -33,19 +33,23 @@ ifsIterates n (fs,vals) = fs =<< ifsIterates (n-1) (fs,vals)
 
 ifsCounts :: (Coefficient a) => [Complex Double] -> IFS 
           -> Config c a -> [Complex Double]
-ifsCounts scales ifs (Config _ res d _ _ _) = points
+ifsCounts scales ifs (Config _ _ d _ _ _ _) = points
     where points' = ifsIterates d ifs
           points = case scales of
                         [] -> points'
                         _ -> (\x -> map (x*) scales) =<< points'
 
 ifsPoints :: (Coefficient a) => Config c a -> [(Polynomial a, Root)]
-ifsPoints cfg@(Config ic (rx,ry) d c w g) = ifspoints
+ifsPoints cfg@(Config ic (rx,ry) d c w s g) = ifspoints
   where --ifs = toifs ic c
-        --ifspoints = ifsCounts [1] ifs cfg
+        --ifspoints = ifsCounts [] ifs cfg
         h = (w* fromIntegral(ry) / (fromIntegral(rx)))::Double
         cI = c +! ((-w/2) :+ (-h/2),(w/2) :+ (h/2))
         --cI = ((-8):+(-8),8:+8) --no cheating, don't do any pruning!
         pols = canHaveRoots ic d cI
-        ifspoints = ifsCheatCounts (Config ic (rx,ry) d c w g) (scalePoint c) pols 
-        --ifspoints = ifsCheatCounts (Config ic (rx,ry) d c w g) (\z p -> z) pols
+        ifspoints = ifsCheatCounts cfg scaling pols
+        scaling = case s of
+                       Left False -> \z p -> z
+                       Left True  -> scalePoint c
+                       Right f    -> \z p -> (1-f') * z + f' * scalePoint c z p
+                           where f' = toComplex f

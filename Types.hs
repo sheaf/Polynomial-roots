@@ -92,6 +92,7 @@ data Config c a = Config { coefficients :: [a]
                          , degree       :: Degree
                          , center       :: Center
                          , width        :: Width
+                         , scaling      :: Either Bool Double
                          , colouring    :: c
                          }
 

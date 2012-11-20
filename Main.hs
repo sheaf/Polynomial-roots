@@ -55,36 +55,36 @@ instance (PCoefficient a) => Mode (IFSDensityMode a) where
     type ModeColour (IFSDensityMode a) = DensityCol
     type ModeConfig (IFSDensityMode a) = Config DensityCol a
     getInputData = const ((map (\(a,b) -> b)) . ifsPoints)
-    getib = const (\ (Config _ _       _ c w _) -> let wC = (w/2) :+ (w/2) 
+    getib = const (\ (Config _ _       _ c w _ _) -> let wC = (w/2) :+ (w/2) 
                                                    in (pair mkCd2 (0 - wC), pair mkCd2 (0 + wC)))
-    extractCol _ = (\ (Config _ _ _ _ _ g) -> g)
+    extractCol _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig _ = pModeConfig pDensityCol
 
 instance (PCoefficient a) => Mode (IFSSourceMode a) where
     type ModeColour (IFSSourceMode a) = SourceCol a
     type ModeConfig (IFSSourceMode a) = Config (SourceCol a) a
     getInputData = const ifsPoints
-    getib = const (\ (Config _ _       _ c w _) -> let wC = (w/2) :+ (w/2) 
+    getib = const (\ (Config _ _       _ c w _ _) -> let wC = (w/2) :+ (w/2) 
                                                    in (pair mkCd2 (0 - wC), pair mkCd2 (0 + wC)))
-    extractCol _ = (\ (Config _ _ _ _ _ g) -> g)
+    extractCol _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig _ = pModeConfig (pSourceCol pCoeff)
 
 instance (PCoefficient a) => Mode (RootsSourceMode a) where
     type ModeColour (RootsSourceMode a) = SourceCol a
     type ModeConfig (RootsSourceMode a) = Config (SourceCol a) a
     getInputData = const getRoots
-    getib = const (\ (Config _ _       _ c w _) -> let wC = (w/2) :+ (w/2) 
+    getib = const (\ (Config _ _       _ c w _ _) -> let wC = (w/2) :+ (w/2) 
                                                    in (pair mkCd2 (c - wC), pair mkCd2 (c + wC)))
-    extractCol _ = (\ (Config _ _ _ _ _ g) -> g)
+    extractCol _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig _ = pModeConfig (pSourceCol pCoeff)
 
 instance (PCoefficient a) => Mode (RootsDensityMode a) where
     type ModeColour (RootsDensityMode a) = DensityCol
     type ModeConfig (RootsDensityMode a) = Config DensityCol a
     getInputData = const (map (\(a,b) -> b) . getRoots)
-    getib = const (\ (Config _ _       _ c w _) -> let wC = (w/2) :+ (w/2) 
+    getib = const (\ (Config _ _       _ c w _ _) -> let wC = (w/2) :+ (w/2) 
                                                    in (pair mkCd2 (c - wC), pair mkCd2 (c + wC)))
-    extractCol _ = (\ (Config _ _ _ _ _ g) -> g)
+    extractCol _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig _ = pModeConfig pDensityCol
 
 --------------------------------------------------------------------------------

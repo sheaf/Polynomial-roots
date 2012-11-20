@@ -85,12 +85,14 @@ pModeConfig p = do manyTill anyChar (try (newline *> string "mode"))
                    pFieldSep
                    w <- pField "width" *> pDouble
                    pFieldSep
+                   s <- pField "scaling" *> pScaling
+                   pFieldSep
                    many newline
                    col <- pField "colouring" *> p
                    optional $ pFieldSep
                    many newline
                    pString "}"
-                   return (Config cfs res deg ctr w col)
+                   return (Config cfs res deg ctr w s col)
 
 pDensityCol :: (Monad m) => ParsecT String u m DensityCol
 pDensityCol = do many newline
@@ -124,6 +126,19 @@ pFieldSep = many1 pNewline
 
 pNewline :: (Monad m) => ParsecT String u m Char
 pNewline = pGenToken newline 
+
+pBool :: (Monad m) => ParsecT String u m Bool
+pBool = do try $ pStrings ["yes", "y", "true", "t"]
+           return True
+       <|> do pStrings ["no", "n", "false", "f"]
+              return False
+
+pEither :: (Monad m) => ParsecT String u m a -> ParsecT String u m b -> ParsecT String u m (Either a b)
+pEither p q = Left <$> try p
+          <|> Right <$> q
+
+pScaling :: (Monad m) => ParsecT String u m (Either Bool Double)
+pScaling = pEither pBool pDouble
 
 pGradSpec :: (Monad m) => ParsecT String u m GradientSpec
 pGradSpec = pGradName
@@ -212,6 +227,9 @@ pField str = pString str <* pString ":"
 
 pString :: (Monad m) => String -> ParsecT String u m String
 pString str = pGenToken $ insensitiveString str
+
+pStrings :: (Monad m) => [String] -> ParsecT String u m String
+pStrings strs = choice (map (try . pString) strs)
 
 pInt :: (Monad m, Integral a, Read a) => ParsecT String u m a
 pInt = pGenToken intVal
