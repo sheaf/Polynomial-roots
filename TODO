@@ -7,13 +7,12 @@ Add parallelisation.
 Parsing:
 Change pCd2 etc to allow both tuples and complex numbers.
 Add option to read in named colours as opposed to just hex values.
+Allow to parse alpha channel for colours.
 Make parsing more consistent and make sure it always works.
-Cleanup gradient parsing.
 Give helpful error messages for parsing pairs, lists, etc.
 
 Colouring:
-Fix source colouring coefficient matching method.
-Allow additional gradient with source colouring (instead of just hsv).
+Allow to change background colour, and also to output transparent png files.
 
 Comments:
 Add comments everywhere, with documentation.

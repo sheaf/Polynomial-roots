@@ -75,10 +75,11 @@ collate cvs1 = Grad $ blender cvs'
                     (c2,a2) = fromJust $ head $ dropWhile (\(a,b) -> b < n2) cvs 
                     n' = if a1==a2 then n2 else (n2-a1)/(a2-a1)
 
-collateOpaque = collate . map (first opaque)
+withOpacityG :: Double -> Gradient Double Colour Double 
+             -> Gradient Double AlphaColour Double
+withOpacityG o = onOutput (`withOpacity` o)
 
-asHue :: Gradient Double AlphaColour Double
-asHue = Grad (\n -> opaque $ hsv n 1 1)
+collateWithOp o = withOpacityG o . collate
 
 opacify :: (Num a) => Colour a -> Gradient m AlphaColour a -> Gradient m Colour a
 opacify bg = onOutput (`over` bg)
@@ -86,18 +87,29 @@ opacify bg = onOutput (`over` bg)
 fadeIn c = linear (opaque c) transparent
 fadeOut c = linear transparent (opaque c)
 
-warm   = collateOpaque [(black,0),(red   ,1/3),(yellow   ,2/3),(white    ,1)]
-cold   = collateOpaque [(black,0),(blue  ,1/3),(cyan     ,2/3),(white    ,1)]
-sunset = collateOpaque [(black,0),(purple,1/5),(firebrick,2/5),(goldenrod,1/2)
-                       ,(orange,3/5),(white,1)]
+warm, cold, sunset :: Double -> Gradient Double AlphaColour Double
+warm   o = collateWithOp o [(black,0),(red   ,1/3),(yellow   ,2/3),(white    ,1)]
+cold   o = collateWithOp o [(black,0),(blue  ,1/3),(cyan     ,2/3),(white    ,1)]
+sunset o = collateWithOp o [(black,0),(purple,1/5),(firebrick,2/5),(goldenrod,1/2)
+                           ,(orange,3/5),(white,1)]
 
 monochrome' = constant (opaque white)
 monochrome = Just Grad { runGrad = runGrad monochrome'}
+hsvGrad' o d = flip withOpacity o $ hsv d 1 1
+hsvGrad o = Grad { runGrad = hsvGrad' o }
 
-gradientByName "warm"        = Just warm
-gradientByName "cold"        = Just cold
-gradientByName "sunset"      = Just sunset
-gradientByName _             = Nothing
+gradientByName' :: String -> (Double -> Gradient Double AlphaColour Double)
+gradientByName' "warm"   = warm
+gradientByName' "cold"   = cold
+gradientByName' "sunset" = sunset
+gradientByName' "hsv"    = hsvGrad
+gradientByName' s        = error $ "unrecognised gradient name: " ++ s
+
+gradientByName (s,d) = case d of
+                            Just d' -> Just $ gradientByName' s d'
+                            Nothing -> Just $ gradientByName' s 1
+
+gradientNames = ["warm", "cold", "sunset", "hsv"]
 
 gradientFromSpec def bg gSpec = opacify bg $ fromExpr gSpec ?? def
 
@@ -121,11 +133,13 @@ getBlendFunc Overlay = (++)
 instance (Coefficient a) => ColourScheme (SourceCol a) where
     type ColourData (SourceCol a) = AlphaColour Double
     type InputData  (SourceCol a)= (Polynomial a, Complex Double)
-    toColour _           = id
-    toData   ("1",l,o,t) = \(p,r) -> source1 l o (drop t p) r
-    toData   ("2",l,o,t) = \(p,r) -> source2 l o (drop t p) r
-    toData   _           = error "wrong method for source colouring"
-    toCoord  _ (_,z)     = z
+    toColour _              = id
+    toData   (s, "1",l,t) = \(p,r) -> source1 g l (drop t p) r
+        where g = fromJust $ fromExpr s
+    toData   (s, "2",l,t) = \(p,r) -> source2 g l (drop t p) r
+        where g = fromJust $ fromExpr s
+    toData   _              = error "wrong method for source colouring"
+    toCoord  _ (_,z)        = z
 
 instance ColourScheme DensityCol where
     type ColourData DensityCol = (Sum Double)
@@ -139,10 +153,13 @@ density :: Double -> r -> Sum Double
 density d _ = Sum d
 
 --Colouring by source polynomial, "base n" and "scale factor" methods.
-source1, source2 :: (Coefficient a) => IterCoeffs a -> Double -> Polynomial a -> Complex Double -> (AlphaColour Double)
-source1 cfs o p _ = flip withOpacity o $ hsv (toGValue1 cfs p  ) 1 1
-source2 cfs o p r = flip withOpacity o $ hsv (toGValue2 cfs p r) 1 1
+source1, source2 :: (Coefficient a) => Gradient Double AlphaColour Double
+                 -> IterCoeffs a -> Polynomial a 
+                 -> Complex Double -> AlphaColour Double
+source1 g cfs p _ = runGrad g (toGValue1 cfs p  )
+source2 g cfs p r = runGrad g (toGValue2 cfs p r)
 
+--hsv (toGValue1 cfs p) 1 1
 --------------------------------------------------------------------------------
 --Converting polynomials to values to be able to apply gradients.
 

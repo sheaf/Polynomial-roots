@@ -12,8 +12,10 @@ import Data.Ratio
 import Text.Parsec
 import Text.Parsec.Char
 import Text.Parsec.Combinator
+
 import Configuration
 import Rendering.Coord hiding (elem)
+import Rendering.Gradient(gradientNames)
 import Debug.Trace
 
 import Types
@@ -112,17 +114,17 @@ pSourceCol :: (Monad m) => ParsecT String u m a -> ParsecT String u m (SourceCol
 pSourceCol pCf = do many newline
                     pString "{"
                     many newline
+                    grad <- pField "gradient" *> pGradSpec
+                    pFieldSep
                     method <- pField "method" *> pStrings ["1","2"]
                     pFieldSep
                     coeffs <- pField "coefficients" *> pList pCf
-                    pFieldSep
-                    op <- pField "opacity" *> pDouble
                     pFieldSep
                     t <- pField "truncate" *> pNat
                     optional $ pFieldSep
                     many newline
                     pString "}"
-                    return (method, coeffs, op, t)
+                    return (grad, method, coeffs, t)
 
 pFieldSep :: (Monad m) => ParsecT String u m String
 pFieldSep = many1 pNewline
@@ -145,14 +147,12 @@ pScaling :: (Monad m) => ParsecT String u m (Either Bool Double)
 pScaling = pEither pBool pDouble
 
 pGradSpec :: (Monad m) => ParsecT String u m GradientSpec
-pGradSpec = pGradName
-        <|> pParens pGradSpecExpr
-
-pGradSpecExpr :: (Monad m) => ParsecT String u m GradientSpec
-pGradSpecExpr = choice [pGradName, pGradSplit, pGradCmb, pGradCollate]
+pGradSpec = choice [pGradName, pGradSplit, pGradCmb, pGradCollate]
 
 pGradName :: (Monad m) => ParsecT String u m GradientSpec
-pGradName = NamedGradient <$> pName
+pGradName = do name <- pStrings gradientNames
+               op   <- optionMaybe (try pDouble)
+               return $ NamedGradient (name, op)
 
 pGradSplit :: (Monad m) => ParsecT String u m GradientSpec
 pGradSplit = do pString "split"
@@ -175,7 +175,7 @@ pGradSplitStep exp = do dbl <- pDouble
 
 pGradCmb :: (Monad m) => ParsecT String u m GradientSpec
 pGradCmb = do blFunc <- pEnumerated
-              gExps <- pBrackets $ pGradSpecExpr `sepBy1` pString ","
+              gExps <- pBrackets $ pGradSpec `sepBy1` pString ","
               return $ Combine blFunc gExps
 
 pGradCollate :: (Monad m) => ParsecT String u m GradientSpec
@@ -304,7 +304,7 @@ keywords :: [String]
 keywords = [ "run-mode", "render", "center", "size", "fix-aspect"
            , "output-size", "output-file", "gradient", "split"
            , "inv", "exp", "rev", "blend", "overlay", "density"
-           , "method", "coefficients", "degree", "opacity", "width"
+           , "method", "coefficients", "degree", "truncate", "width"
            ]
 
 between' outer = between outer outer

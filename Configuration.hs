@@ -21,7 +21,7 @@ data AspectCorrection = None | Clip | Expand
 data BlendFunction = Blend | Overlay
     deriving (Eq, Ord, Read, Show, Enum, Bounded)
 
-data GradientSpec = NamedGradient String
+data GradientSpec = NamedGradient (String, Maybe Double)
                   | Split [(GradientSpec, Double)]
                   | Combine BlendFunction [GradientSpec]
                   | Collate [(AlphaColour Double, Double)]
