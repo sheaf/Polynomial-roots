@@ -10,7 +10,7 @@ Add option to read in named colours as opposed to just hex values.
 Make parsing more consistent and make sure it always works.
 
 Colouring:
-Allow to change background colour, and also to output transparent png files.
+Allow output of transparent png files.
 
 Comments:
 Add comments everywhere, with documentation.
