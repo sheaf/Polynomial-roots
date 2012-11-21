@@ -76,8 +76,7 @@ collate cvs1 = Grad $ blender cvs'
                     (c2,a2) = fromJust $ head $ dropWhile (\(a,b) -> b < n2) cvs 
                     n' = if a1==a2 then n2 else (n2-a1)/(a2-a1)
 
-withOpacityG :: Double -> Gradient Double Colour Double 
-             -> Gradient Double AlphaColour Double
+withOpacityG :: Num a => a -> Gradient a Colour a -> Gradient a AlphaColour a
 withOpacityG o = onOutput (`withOpacity` o)
 
 collateWithOp o = withOpacityG o . collate
@@ -136,19 +135,21 @@ instance (Coefficient a) => ColourScheme (SourceCol a) where
     type ColourData (SourceCol a) = AlphaColour Double
     type InputData  (SourceCol a)= (Polynomial a, Complex Double)
     toColour _              = id
-    toData   (s, "1",l,t) = \(p,r) -> source1 g l (drop t p) r
+    toData   (s,_,"1",l,t)  = \(p,r) -> source1 g l (drop t p) r
         where g = fromJust $ fromExpr s
-    toData   (s, "2",l,t) = \(p,r) -> source2 g l (drop t p) r
+    toData   (s,_,"2",l,t)  = \(p,r) -> source2 g l (drop t p) r
         where g = fromJust $ fromExpr s
     toData   _              = error "wrong method for source colouring"
     toCoord  _ (_,z)        = z
+    bg (_,col,_,_,_)        = col
 
 instance ColourScheme DensityCol where
     type ColourData DensityCol = (Sum Double)
     type InputData  DensityCol = (Complex Double)
-    toColour (spec,_) = runGrad (fromJust $ fromExpr spec) . getSum
-    toData   (_   ,d) = density d
-    toCoord  _ z      = z
+    toColour (spec,_,_) = runGrad (fromJust $ fromExpr spec) . getSum
+    toData   (_   ,_,d) = density d
+    toCoord  _ z        = z
+    bg       (_,col,_)  = col
 
 --Density colouring.
 density :: Double -> r -> Sum Double
@@ -161,7 +162,6 @@ source1, source2 :: (Coefficient a) => Gradient Double AlphaColour Double
 source1 g cfs p _ = runGrad g (toGValue1 cfs p  )
 source2 g cfs p r = runGrad g (toGValue2 cfs p r)
 
---hsv (toGValue1 cfs p) 1 1
 --------------------------------------------------------------------------------
 --Converting polynomials to values to be able to apply gradients.
 

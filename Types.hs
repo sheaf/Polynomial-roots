@@ -86,6 +86,7 @@ type Pixel      = (Int,Int)
 type Scaler a   = Complex Double -> Polynomial a -> Complex Double
 --Gradient as a monoid homomorphism into colour space.
 newtype Gradient m clr a = Grad { runGrad :: m -> clr a }
+type BG = AlphaColour Double
 
 data Config c a = Config { coefficients :: [a]
                          , resolution   :: Resolution
@@ -97,9 +98,10 @@ data Config c a = Config { coefficients :: [a]
                          }
 
 --Colouring schemes.
-type SourceCol  a = (GradientSpec, String, [a], Int) 
-                    --gradient, method, coefficients, truncation
-type DensityCol   = (GradientSpec, Double) --gradient, density
+type SourceCol  a = (GradientSpec, BG, String, [a], Int) 
+                 --gradient, background colour, method, coefficients, truncation
+type DensityCol   = (GradientSpec, BG, Double) 
+                 --gradient, background colour, density
 
 class (Monoid (ColourData c)) => ColourScheme c where
     type ColourData c :: *
@@ -107,3 +109,4 @@ class (Monoid (ColourData c)) => ColourScheme c where
     toColour :: c -> ColourData c -> AlphaColour Double
     toData   :: c -> InputData  c -> ColourData c
     toCoord  :: c -> InputData  c -> Complex Double
+    bg       :: c -> AlphaColour Double

@@ -104,17 +104,21 @@ pDensityCol = do many newline
                  many newline
                  grad <- pField "gradient" *> pGradSpec
                  pFieldSep
+                 bgc <- pField "background" *> pColour
+                 pFieldSep
                  op <- pField "density" *> pDouble
                  optional pFieldSep
                  many newline
                  pString "}"
-                 return (grad, op)
+                 return (grad, bgc, op)
 
 pSourceCol :: (Monad m) => ParsecT String u m a -> ParsecT String u m (SourceCol a)
 pSourceCol pCf = do many newline
                     pString "{"
                     many newline
                     grad <- pField "gradient" *> pGradSpec
+                    pFieldSep
+                    bgc <- pField "background" *> pColour
                     pFieldSep
                     method <- pField "method" *> pStrings ["1","2"]
                     pFieldSep
@@ -124,7 +128,7 @@ pSourceCol pCf = do many newline
                     optional $ pFieldSep
                     many newline
                     pString "}"
-                    return (grad, method, coeffs, t)
+                    return (grad, bgc, method, coeffs, t)
 
 pFieldSep :: (Monad m) => ParsecT String u m String
 pFieldSep = many1 pNewline
@@ -186,7 +190,7 @@ pColour = do pString "#"
              hex   <- count 6 (oneOf hexDigits)
              alpha <- option "FF" $ count 2 (oneOf hexDigits)
              return $ colourFromHex hex alpha
-             <?> "hexadecimal colour"
+             <?> "hex colour value"
              --todo: add option for reading colour names instead
                  where hexDigits = "0123456789ABCDEF"
                        colourFromHex :: String -> String -> AlphaColour Double
@@ -196,7 +200,7 @@ pColour = do pString "#"
                                  b' = take 2 (drop 4 hex)
                                  a' = alpha
                                  [r,g,b,a] = map go [r',g',b',a']
-                                    where go x = fromJust . read $ "0x" ++ x
+                                    where go x = (/255) . fromJust . read $ "0x" ++ x
 
 pCd2 :: (Monad m) => ParsecT String u m a -> ParsecT String u m (Cd2 a)
 pCd2 p = mkCd2 <$> p <*> p
@@ -259,12 +263,10 @@ pComplex p = do s1 <- option id pm
                 z2 <- option (0 :+ 0) q'
                 return $ s1 z1 + z2
                 <?> "complex number"
-                    where q = do try $ do pString "i"
+                    where q = do try $ pString "i" *>
                                           choice [ pm *> return (0:+1)
                                                  , (0 :+) <$> option 1 p]
-                                 <|> ( try $ do z <- (0 :+) <$> option 1 p
-                                                pString "i"
-                                                return z )
+                                 <|> (try $ (0 :+) <$> option 1 p <* pString "i")
                                  <|> (:+ 0) <$> p
                           q' = do s <- pm
                                   s <$> q

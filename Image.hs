@@ -22,8 +22,8 @@ import Rendering.Gradient
 writePixel :: ColourScheme c 
            => GD.Image -> c -> RstCoord -> ColourData c -> IO()
 writePixel img c xy v = GD.setPixel (toTuple xy) clr img
-  where clr = fromColour $ flip over bg $ (toColour c) v
-        bg  = flip over black $ (toColour c) mempty
+  where clr = fromColour $ flip over bgc $ (toColour c) v
+        bgc = flip over black $ bg c
 
 writePixels :: (Rasterizer r, RstContext r ~ IO, ColourScheme c) 
             => r v i (ColourData c) -> GD.Image -> [i] -> c -> IO()
@@ -36,9 +36,9 @@ writeImage :: (Foldable f, Rasterizer r, ColourScheme c, RstContext r ~ IO)
            => f i -> r v i (ColourData c) -> c -> FilePath -> IO ()
 writeImage xs rst c file = do
     let (rx,ry) = toTuple $ outputSize rst
-    let bg = fromColour $ flip over black $ (toColour c) mempty
+    let bgc = fromColour $ flip over black $ bg c
     image <- GD.newImage (rx, ry)
-    GD.fillImage bg image
+    GD.fillImage bgc image
     writePixels rst image (toList xs) c
     GD.savePngFile file image
 
@@ -48,8 +48,8 @@ fromColour = fromRGB8 . toRGB8
 dumpImage :: (Rasterizer r, ColourScheme c, m ~ ColourData c, RstContext r ~ IO) 
           => r v i m -> c -> FilePath -> IO ()
 dumpImage rst c file = do image <- GD.newImage (rx, ry)
-                          let bg = fromColour $ flip over black $ (toColour c) mempty
-                          GD.fillImage bg image
+                          let bgc = fromColour $ flip over black $ bg c
+                          GD.fillImage bgc image
                           withOutput_ rst (writePixel image c)
                           GD.savePngFile file image
   where (rx,ry) = toTuple $ outputSize rst
