@@ -26,6 +26,13 @@ toRGB = uncurryRGB (,,) . toSRGB
 toRGB8 :: RGBColour -> (Word8, Word8, Word8)
 toRGB8 = uncurryRGB (,,) . toSRGB24
 
+rgbaToWord32 :: RGBAColour -> Word32
+rgbaToWord32 acol = (\(r,g,b) -> 0x010000 * fromIntegral r 
+                               + 0x000100 * fromIntegral g 
+                               + 0x000001 * fromIntegral b) (toRGB8 col)
+                  + 0x0100000000 * (floor $ alphaChannel acol)
+    where col = acol `over` black
+
 hsv :: Double -> Double -> Double -> RGBColour
 hsv h s v = toSRGBSpace $ HSV.hsv (clamp 1 h * 360) s v
 

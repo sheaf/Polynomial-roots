@@ -54,7 +54,11 @@ endSDL = liftIO SDL.quit
 
 runMainLoop :: (Foldable f, ColourScheme c, Rasterizer r, RstContext r ~ IO) 
             => f i -> r v i (ColourData c) -> c -> EnvIO ()
-runMainLoop xs = mainLoop (toList xs)
+runMainLoop xs rst c = do s <- liftIO SDL.getVideoSurface
+                          liftIO $ SDL.fillRect s Nothing (SDL.Pixel col)
+                          mainLoop (toList xs) rst c
+                            where bgc = bg c
+                                  col = rgbaToWord32 bgc
 
 drawPixel :: (Rasterizer r, RstContext r ~ IO, ColourScheme c) 
             => r v i (ColourData c) -> c -> SDL.Surface -> i -> IO ()
