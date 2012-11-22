@@ -42,8 +42,7 @@ canHaveRoots cfs d cI = concatMap flatten $ constructPolyForest d cfs (bound cfs
 --------------------------------------------------------------------------------
 --Root finding.
 
---Method using GSL library. Currently not used.
-{-
+{---Method using GSL library. Currently not used.
 findRoots' :: Polynomial Double -> [Root]
 findRoots' p
     | length p' <= 1 = []

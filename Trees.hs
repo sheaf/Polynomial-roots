@@ -62,26 +62,23 @@ pruneLeaves bound cI p (Node (c,_) []:ns)
               values = evaluateD (map toComplex $ p ++ [c]) dI
               --(evaluateD prunes more efficiently than evaluateI)
               ns' = pruneLeaves bound cI p ns
-pruneLeaves bound cI p (Node (c,b) f:ns)
-    --bypass, in case pruning can't work
-    | 1 `elemI` absI cI = Node (c,True) f : ns'
-    --end of bypass
-    | otherwise = case f' of
-                       [] -> ns'
-                       _ -> Node (c,b) f' : ns'
-        where ns' = pruneLeaves bound cI p ns
-              f' = pruneLeaves bound cI (p++[c]) f
+pruneLeaves bound cI p (Node (c,b) f:ns) = case f' of
+                                                [] -> ns'
+                                                _ -> Node (c,b) f' : ns'
+        where ns' = pruneLeaves bound cI p        ns
+              f'  = pruneLeaves bound cI (p++[c]) f
 
 --Constructs a pruned version of the tree of polynomials.
 constructForest :: (Coefficient a) => 
                  Degree -> IterCoeffs a -> RealBound -> ComplexInterval
                  -> BForest a
 constructForest 0 _ _ _ = [Node (1,False) []]
-constructForest d cfs bd cI = pruneLeaves bd cI [] . nextLevelF cfs $ constructForest (d-1) cfs bd cI
+constructForest d cfs bd cI = pruneLeaves bd cI [] . nextLevelF cfs 
+                            $ constructForest (d-1) cfs bd cI
 
 constructPolyForest :: (Coefficient a) =>
-                 Degree -> IterCoeffs a -> RealBound -> ComplexInterval
-                 -> Forest (Polynomial a)
+                    Degree -> IterCoeffs a -> RealBound -> ComplexInterval
+                    -> Forest (Polynomial a)
 constructPolyForest d cfs bd cI = toPolyForest [] $ constructForest d cfs bd cI
 
 --Given a forest of polynomials, this takes the leaves,
@@ -90,12 +87,13 @@ constructPolyForest d cfs bd cI = toPolyForest [] $ constructForest d cfs bd cI
 continueForest :: (Coefficient a) =>
                   Degree -> IterCoeffs a -> RealBound -> ComplexInterval
                   -> Forest (Polynomial a) -> [(Polynomial a, BForest a)]
-continueForest 0 _ bd cI f = filter (not.null.snd) $ map sPrune $ getLeafForest f
-                                 where sPrune (Node p _) = (p', pruneLeaves bd cI p' [Node (c,True) []]) 
-                                        where c = case last p of
-                                                       Nothing -> error "empty polynomial in forest continuation"
-                                                       Just lp -> lp
-                                              p'= (reverse . drop 1 . reverse) p
+continueForest 0 _ bd cI f = filter (not.null.snd) $ map sPrune 
+                                                   $ getLeafForest f
+  where sPrune (Node p _) = (p', pruneLeaves bd cI p' [Node (c,True) []]) 
+          where c = case last p of
+                         Nothing -> error "empty polynomial in forest continuation"
+                         Just lp -> lp
+                p'= (reverse . drop 1 . reverse) p
 continueForest d cfs bd cI f = filter (not.null.snd) $
                                map sNextLevel $
                                continueForest (d-1) cfs bd cI f 
