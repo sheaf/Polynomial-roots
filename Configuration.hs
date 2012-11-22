@@ -36,7 +36,7 @@ data RunMode = ImageFile | WithGUI
     deriving (Eq, Ord, Read, Show, Enum, Bounded)
 
 data RunSpec = RunSpec { _runMode :: RunMode
-                       , _renders :: [RenderSpec]
+                       , _render  :: RenderSpec
                        } deriving (Eq, Read, Show)
 
 $(mkLabels [''WindowSpec, ''RenderSpec, ''RunSpec])

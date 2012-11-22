@@ -19,9 +19,9 @@ import Configuration.Parsing
 import IFS (ifsPoints)
 import Image (writeImage)
 import MainGUI (guiMain)
-import Pair (Pair(pair))
+import Pair (Pair(pair), StrictPair)
 import Rendering.ArrayRaster (IOArrayRaster)
-import Rendering.Coord (Cd2, mkCd2)
+import Rendering.Coord (Cd2(..), mkCd2)
 import Rendering.Raster (Rasterizer(mkRasterizer))
 import Roots (getRoots)
 import Settings (get, runEnvT, specToSettings)
@@ -36,7 +36,6 @@ class (ColourScheme (ModeColour m)) => Mode m where
     getInputData :: m -> ModeConfig m -> [InputData (ModeColour m)]
     parseConfig :: (Monad n) => m -> ParsecT String u n (ModeConfig m)
     extractCol :: m -> ModeConfig m -> ModeColour m
-    getib :: m -> ModeConfig m -> (Cd2 Double, Cd2 Double)
 
 data IFSDensityMode   a = IFSDensityMode
 data IFSSourceMode    a = IFSSourceMode
@@ -47,8 +46,6 @@ instance (PCoefficient a) => Mode (IFSDensityMode a) where
     type ModeColour (IFSDensityMode a) = DensityCol
     type ModeConfig (IFSDensityMode a) = Config DensityCol a
     getInputData _ = (map P.snd) . ifsPoints
-    getib _ = (\ (Config _ _       _ c w _ _) -> let wC = (w/2) :+ (w/2) 
-                                                   in (pair mkCd2 (0 - wC), pair mkCd2 (0 + wC)))
     extractCol _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig _ = pModeConfig pDensityCol
 
@@ -56,8 +53,6 @@ instance (PCoefficient a) => Mode (IFSSourceMode a) where
     type ModeColour (IFSSourceMode a) = SourceCol a
     type ModeConfig (IFSSourceMode a) = Config (SourceCol a) a
     getInputData _ = ifsPoints
-    getib _ = (\ (Config _ _       _ c w _ _) -> let wC = (w/2) :+ (w/2) 
-                                                   in (pair mkCd2 (0 - wC), pair mkCd2 (0 + wC)))
     extractCol _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig _ = pModeConfig (pSourceCol pCoeff)
 
@@ -65,8 +60,6 @@ instance (PCoefficient a) => Mode (RootsSourceMode a) where
     type ModeColour (RootsSourceMode a) = SourceCol a
     type ModeConfig (RootsSourceMode a) = Config (SourceCol a) a
     getInputData _ = getRoots
-    getib _ = (\ (Config _ _       _ c w _ _) -> let wC = (w/2) :+ (w/2) 
-                                                   in (pair mkCd2 (c - wC), pair mkCd2 (c + wC)))
     extractCol _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig _ = pModeConfig (pSourceCol pCoeff)
 
@@ -74,8 +67,6 @@ instance (PCoefficient a) => Mode (RootsDensityMode a) where
     type ModeColour (RootsDensityMode a) = DensityCol
     type ModeConfig (RootsDensityMode a) = Config DensityCol a
     getInputData _ = (map P.snd) . getRoots
-    getib _ = (\ (Config _ _       _ c w _ _) -> let wC = (w/2) :+ (w/2) 
-                                                   in (pair mkCd2 (c - wC), pair mkCd2 (c + wC)))
     extractCol _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig _ = pModeConfig pDensityCol
 
@@ -115,15 +106,18 @@ runWriteImage fn g xs r = do rst <- r
 
 getrb :: RunSpec -> (Cd2 Int, Cd2 Int)
 getrb spec = (mkCd2 0 0, r)
-    where Just render = head . get renders $ spec
-          r = get C.outputSize render
+    where r = get (C.outputSize . render) spec
 
 getPlot :: (Mode m) => m -> ModeConfig m -> ModeColour m -> RunSpec
                     -> (forall f v i. Foldable f => f i -> IO (IOArrayRaster v i (ColourData (ModeColour m))) -> r)
                     -> r
 getPlot mode cfg col spec k =
     k (getInputData mode cfg) $
-    mkRasterizer (\inp -> (pair mkCd2 (toCoord col inp), toData col inp)) (getrb spec) (getib mode cfg)
+    mkRasterizer (\inp -> (pair mkCd2 (toCoord col inp), toData col inp)) (getrb spec) ib
+        where c  = get (windowCenter . render) spec
+              s  = get (windowSize   . render) spec
+              s' = (s*) $ mkCd2 0.5 0.5
+              ib = (c - s', c + s')
 
 --------------------------------------------------------------------------------
 --Config handling.

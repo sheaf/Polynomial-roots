@@ -44,11 +44,11 @@ runParse parser name str = liftM (left show) (runParserT parser () name str)
 pRunSpec :: (Monad m) => ParsecT String u m RunSpec
 pRunSpec = do md <- pField "run-mode" *> pRunMode
               many1 newline
-              pString "renders"
+              pString "render"
               many newline
-              rds <- many1 pRenderSpec
+              rdr <- pRenderSpec
               pString "mode"
-              return $ RunSpec md rds
+              return $ RunSpec md rdr
 
 pRunMode :: (Monad m) => ParsecT String u m RunMode
 pRunMode = pString "gui" *> return WithGUI

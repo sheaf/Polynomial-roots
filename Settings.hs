@@ -20,7 +20,7 @@ import Data.Complex
 import Data.Label (mkLabels)
 import Data.Label.Pure
 
-import Types (outputSize, renders, windowCenter, windowSize
+import Types (outputSize, render, windowCenter, windowSize
              , Width, Center, Resolution)
 import qualified Types as T ( Config(Config) )
 import qualified Pair as P ( StrictPair(spFst), Pair(toTuple) )
@@ -66,7 +66,7 @@ envToConfig ic d col = do (Settings r c w) <- ask
                           return $ T.Config ic r d c w col
 
 specToSettings spec = Settings r c w
-    where render = head . get renders $ spec
-          c = uncurry (:+) . P.toTuple . getCd2 $ get windowCenter render
-          w = P.spFst . getCd2 $ get windowSize render
-          r = P.toTuple . getCd2 $ get outputSize render
+    where rdr = get render $ spec
+          c = uncurry (:+) . P.toTuple . getCd2 $ get windowCenter rdr
+          w = P.spFst . getCd2 $ get windowSize rdr
+          r = P.toTuple . getCd2 $ get outputSize rdr
