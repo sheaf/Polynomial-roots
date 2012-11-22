@@ -1,10 +1,12 @@
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+
 
 module Roots where
 
 import Overture
 import Prelude ()
-import Data.Tree (flatten)
+import Data.Tree (Forest)
 import Data.Maybe (fromJust)
 
 --import Numeric.GSL.Polynomials(polySolve)
@@ -31,13 +33,13 @@ bound cfs cI d
 
 --This gives the possible initial terms for polynomials that might have roots.
 canYieldRoots :: (Coefficient a) =>
-        IterCoeffs a -> Degree -> ComplexInterval -> [Polynomial a]
-canYieldRoots cfs d cI = concatMap getAllLeafPolynomials $ constructForest d cfs (bound cfs cI) cI
+              IterCoeffs a -> Degree -> ComplexInterval -> [Polynomial a]
+canYieldRoots cfs d cI = concatMap getAllLeafPolynomials 
+                       $ constructForest d cfs (bound cfs cI) cI
 
 canHaveRoots :: (Coefficient a) =>
-        IterCoeffs a -> Degree -> ComplexInterval -> [Polynomial a]
---canHaveRoots cfs d cI = concatMap getPolynomials $ constructForest d cfs (bound cfs cI) cI
-canHaveRoots cfs d cI = concatMap flatten $ constructPolyForest d cfs (bound cfs cI) cI
+             IterCoeffs a -> Degree -> ComplexInterval -> Forest (Polynomial a)
+canHaveRoots cfs d cI = constructPolyForest d cfs (bound cfs cI) cI
 
 --------------------------------------------------------------------------------
 --Root finding.
@@ -81,13 +83,13 @@ companion' n = nxt $ companion' (n-1)
 --------------------------------------------------------------------------------
 --Plotting sets of roots.
 
-getPolys :: (Coefficient a) => Config c a -> [Polynomial a]
+getPolys :: (Coefficient a) => Config c a -> Forest (Polynomial a)
 getPolys (Config ic (rx, ry) d c w _ _) = canHaveRoots ic d cI
   where h = w * fromIntegral ry / fromIntegral rx
         cI = c +! ((-w/2) :+ (-h/2), (w/2) :+ (h/2))
 
-polyRoots :: (Coefficient a) => [Polynomial a] -> [(Polynomial a, Root)]
-polyRoots polys = (\p -> map (\r -> (p,r)) . findRoots $ p) =<< polys
+polyRoots :: (Coefficient a, Functor f) => f (Polynomial a) -> f (Polynomial a, [Root])
+polyRoots polys = (\p -> (p,findRoots p)) <$> polys
 
-getRoots :: (Coefficient a) => Config c a -> [(Polynomial a, Root)]
-getRoots cfg = polyRoots $ getPolys cfg
+getRoots :: (Coefficient a) => Config c a -> Forest (Polynomial a, [Root])
+getRoots cfg = map polyRoots $ getPolys cfg

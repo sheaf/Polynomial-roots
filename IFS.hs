@@ -5,6 +5,8 @@ module IFS where
 import Overture
 import Prelude ()
 
+import Data.Tree(Forest)
+
 import Interval(Interval((+!)))
 import Polynomials
 import Roots (canHaveRoots)
@@ -17,11 +19,11 @@ scalePoint :: (Coefficient a) => Complex Double -> Scaler a -- Scaler a ~ (Compl
 scalePoint c z p = z * scale
     where scale = (negate . recip . (`evaluate` c)) . derivative . map toComplex $ p
 
-ifsCounts :: (Coefficient a) => Config c a -> Scaler a -> [Polynomial a] -> [(Polynomial a, Root)]
+ifsCounts :: (Coefficient a) => Config c a -> Scaler a -> Forest (Polynomial a) -> Forest (Polynomial a, Root)
 ifsCounts (Config _ _ _ c _ _ _) f ps = points
-    where points = map (\p -> (p,f (flip evaluate c . map toComplex $ p) p)) ps
+    where points = (map . fmap) (\p -> (p,f (flip evaluate c . map toComplex $ p) p)) ps
 
-ifsPoints :: (Coefficient a) => Config c a -> [(Polynomial a, Root)]
+ifsPoints :: (Coefficient a) => Config c a -> Forest (Polynomial a, Root)
 ifsPoints cfg@(Config ic (rx,ry) d c w s g) = ifspoints
   where h = (w* fromIntegral(ry) / (fromIntegral(rx)))::Double
         cI = c +! ((-w/2) :+ (-h/2),(w/2) :+ (h/2))

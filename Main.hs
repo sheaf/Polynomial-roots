@@ -4,13 +4,17 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE TupleSections #-}
 
 module Main where
 
 import Overture hiding(fst,snd)
 import Prelude ()
-import qualified Prelude as P (fst, snd)
+import qualified Prelude as P (fst, snd, head)
 
+import Data.Functor.Compose
+import Data.Maybe (fromJust)
+import Data.Tree (Tree(Node))
 import Text.Parsec (ParsecT, try, manyTill, choice, newline, anyChar )
 import qualified Text.Parsec as TP (many, optional)
 
@@ -30,12 +34,13 @@ import Types
 --------------------------------------------------------------------------------
 --Mode definitions.
 
-class (ColourScheme (ModeColour m)) => Mode m where
+class (ColourScheme (ModeColour m), Traversable (Traversor m)) => Mode m where
     type ModeColour m :: *
     type ModeConfig m :: *
-    getInputData :: m -> ModeConfig m -> [InputData (ModeColour m)]
-    parseConfig :: (Monad n) => m -> ParsecT String u n (ModeConfig m)
-    extractCol :: m -> ModeConfig m -> ModeColour m
+    type Traversor  m :: * -> *
+    getInputData :: m -> ModeConfig m -> Traversor m (InputData (ModeColour m))
+    parseConfig  :: (Monad n) => m -> ParsecT String u n (ModeConfig m)
+    extractCol   :: m -> ModeConfig m -> ModeColour m
 
 data IFSDensityMode   a = IFSDensityMode
 data IFSSourceMode    a = IFSSourceMode
@@ -45,28 +50,32 @@ data RootsDensityMode a = RootsDensityMode
 instance (PCoefficient a) => Mode (IFSDensityMode a) where
     type ModeColour (IFSDensityMode a) = DensityCol
     type ModeConfig (IFSDensityMode a) = Config DensityCol a
-    getInputData _ = map P.snd . ifsPoints
+    type Traversor  (IFSDensityMode a) = Tree
+    getInputData _ = (fmap P.snd) . P.head . ifsPoints
     extractCol   _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig  _ = pModeConfig pDensityCol
 
 instance (PCoefficient a) => Mode (IFSSourceMode a) where
     type ModeColour (IFSSourceMode a) = SourceCol a
     type ModeConfig (IFSSourceMode a) = Config (SourceCol a) a
-    getInputData _ = ifsPoints
+    type Traversor  (IFSSourceMode a) = Tree
+    getInputData _ = P.head . ifsPoints
     extractCol   _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig  _ = pModeConfig (pSourceCol pCoeff)
 
 instance (PCoefficient a) => Mode (RootsSourceMode a) where
     type ModeColour (RootsSourceMode a) = SourceCol a
     type ModeConfig (RootsSourceMode a) = Config (SourceCol a) a
-    getInputData _ = getRoots
+    type Traversor  (RootsSourceMode a) = Compose Tree []
+    getInputData _ = Compose . fmap (\(p,rs) -> map (p,) rs) . P.head . getRoots
     extractCol   _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig  _ = pModeConfig (pSourceCol pCoeff)
 
 instance (PCoefficient a) => Mode (RootsDensityMode a) where
     type ModeColour (RootsDensityMode a) = DensityCol
     type ModeConfig (RootsDensityMode a) = Config DensityCol a
-    getInputData _ = map P.snd . getRoots
+    type Traversor  (RootsDensityMode a) = Compose Tree []
+    getInputData _ = Compose . (fmap P.snd) . P.head . getRoots
     extractCol   _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig  _ = pModeConfig pDensityCol
 
