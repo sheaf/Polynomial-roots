@@ -62,11 +62,15 @@ pruneLeaves bound cI p (Node (c,_) []:ns)
               values = evaluateD (map toComplex $ p ++ [c]) dI
               --(evaluateD prunes more efficiently than evaluateI)
               ns' = pruneLeaves bound cI p ns
-pruneLeaves bound cI p (Node (c,b) f:ns) = case f' of
-                                                [] -> ns'
-                                                _ -> Node (c,b) f' : ns'
-        where ns' = pruneLeaves bound cI p        ns
-              f'  = pruneLeaves bound cI (p++[c]) f
+pruneLeaves bound cI p (Node (c,b) f:ns)
+    --bypass, in case pruning can't work
+    | 1 `elemI` absI cI = Node (c,True) f : ns'
+    --end of bypass
+    | otherwise = case f' of
+                       [] -> ns'
+                       _ -> Node (c,b) f' : ns'
+        where ns' = pruneLeaves bound cI p ns
+              f' = pruneLeaves bound cI (p++[c]) f
 
 --Constructs a pruned version of the tree of polynomials.
 constructForest :: (Coefficient a) => 
