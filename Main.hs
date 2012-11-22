@@ -45,30 +45,30 @@ data RootsDensityMode a = RootsDensityMode
 instance (PCoefficient a) => Mode (IFSDensityMode a) where
     type ModeColour (IFSDensityMode a) = DensityCol
     type ModeConfig (IFSDensityMode a) = Config DensityCol a
-    getInputData _ = (map P.snd) . ifsPoints
-    extractCol _ = (\ (Config _ _ _ _ _ _ g) -> g)
-    parseConfig _ = pModeConfig pDensityCol
+    getInputData _ = map P.snd . ifsPoints
+    extractCol   _ = (\ (Config _ _ _ _ _ _ g) -> g)
+    parseConfig  _ = pModeConfig pDensityCol
 
 instance (PCoefficient a) => Mode (IFSSourceMode a) where
     type ModeColour (IFSSourceMode a) = SourceCol a
     type ModeConfig (IFSSourceMode a) = Config (SourceCol a) a
     getInputData _ = ifsPoints
-    extractCol _ = (\ (Config _ _ _ _ _ _ g) -> g)
-    parseConfig _ = pModeConfig (pSourceCol pCoeff)
+    extractCol   _ = (\ (Config _ _ _ _ _ _ g) -> g)
+    parseConfig  _ = pModeConfig (pSourceCol pCoeff)
 
 instance (PCoefficient a) => Mode (RootsSourceMode a) where
     type ModeColour (RootsSourceMode a) = SourceCol a
     type ModeConfig (RootsSourceMode a) = Config (SourceCol a) a
     getInputData _ = getRoots
-    extractCol _ = (\ (Config _ _ _ _ _ _ g) -> g)
-    parseConfig _ = pModeConfig (pSourceCol pCoeff)
+    extractCol   _ = (\ (Config _ _ _ _ _ _ g) -> g)
+    parseConfig  _ = pModeConfig (pSourceCol pCoeff)
 
 instance (PCoefficient a) => Mode (RootsDensityMode a) where
     type ModeColour (RootsDensityMode a) = DensityCol
     type ModeConfig (RootsDensityMode a) = Config DensityCol a
-    getInputData _ = (map P.snd) . getRoots
-    extractCol _ = (\ (Config _ _ _ _ _ _ g) -> g)
-    parseConfig _ = pModeConfig pDensityCol
+    getInputData _ = map P.snd . getRoots
+    extractCol   _ = (\ (Config _ _ _ _ _ _ g) -> g)
+    parseConfig  _ = pModeConfig pDensityCol
 
 --------------------------------------------------------------------------------
 --Routines.
