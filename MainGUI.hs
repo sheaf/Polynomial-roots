@@ -4,27 +4,24 @@ module MainGUI where
 import Overture hiding (mapM_)
 import Prelude ()
 import Control.Exception (bracket_)
-import Control.Monad.IO.Class
-import GHC.Word
-import System.Directory
+import Control.Monad.IO.Class (MonadIO(liftIO))
+import GHC.Word (Word16, Word32)
+import System.Directory (doesFileExist)
 import qualified Graphics.UI.SDL as SDL
 import Graphics.UI.SDL.Keysym
 import Graphics.UI.SDL.Events (Event(..))
 import Data.Foldable (Foldable(), toList)
 import Data.Colour
 
-import Types hiding (Config(..), Gradient, outputSize)
+import Types hiding (Config(..), outputSize)
 import Settings hiding (size)
-import qualified Settings as S
-import Image
-import Pair
-import GUI.Pixels
+import qualified Settings as S (size)
+import Image (dumpImage)
+import Pair (Pair(toTuple))
+import GUI.Pixels (withLock, setPixel)
 import Rendering.Raster
-import Rendering.ArrayRaster
-import Rendering.Gradient
 import Rendering.Colour
-import Rendering.Coord
-import Types(Gradient(..))
+import Rendering.Coord (Cd2, RstSize)
 import Util
 
 type Time = Word32

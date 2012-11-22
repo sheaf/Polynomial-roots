@@ -5,9 +5,6 @@ module Interval where
 import Overture
 import Prelude ()
 
-import Control.Applicative
-import Data.Maybe
-
 import Polynomials
 import Types
 

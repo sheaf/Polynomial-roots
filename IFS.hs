@@ -5,10 +5,9 @@ module IFS where
 import Overture
 import Prelude ()
 
-import Interval
-import Plotting
+import Interval(Interval((+!)))
 import Polynomials
-import Roots
+import Roots (canHaveRoots)
 import Types
 
 --------------------------------------------------------------------------------

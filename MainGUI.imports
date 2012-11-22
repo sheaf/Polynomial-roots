@@ -1,0 +1,72 @@
+import Overture
+    ( print,
+      otherwise,
+      ($),
+      fromIntegral,
+      Eq((/=), (==)),
+      Fractional((/)),
+      Monad(return),
+      Num((*), (+), (-)),
+      Ord((<)),
+      Show(show),
+      Foldable,
+      Int,
+      IO,
+      Maybe(Just, Nothing),
+      putStrLn,
+      null,
+      flip,
+      (=<<),
+      when,
+      mapMaybe,
+      (<$>),
+      toList,
+      any,
+      Complex((:+)),
+      justIf,
+      (++),
+      whenJust )
+import Control.Exception ( bracket_ )
+import Control.Monad.IO.Class ( MonadIO(liftIO) )
+import GHC.Word ( Word16, Word32 )
+import System.Directory ( doesFileExist )
+import qualified Graphics.UI.SDL as SDL
+    ( Surface,
+      InitFlag(InitEverything),
+      MouseButton(ButtonLeft),
+      Pixel(Pixel),
+      setVideoMode,
+      getVideoSurface,
+      flip,
+      fillRect,
+      getTicks,
+      delay,
+      quit,
+      init,
+      pollEvent )
+import Graphics.UI.SDL.Keysym ( SDLKey(SDLK_s), Keysym(Keysym) )
+import Graphics.UI.SDL.Events ( Event(..) )
+import Data.Foldable ()
+import Data.Colour ( ColourOps(over), black )
+import Types ( ColourScheme(ColourData, bg, toColour) )
+import Settings
+    ( mapM_,
+      MonadReader(ask),
+      asks,
+      EnvIO,
+      center,
+      resolution,
+      runEnvT,
+      getEnv )
+import qualified Settings as S ( size )
+import Image ( dumpImage )
+import Pair ( Pair(toTuple) )
+import GUI.Pixels ( withLock, setPixel )
+import Rendering.Raster
+    ( Rasterizer(RstContext, rasterize), outputSize )
+import Rendering.ArrayRaster ()
+import Rendering.Gradient ()
+import Rendering.Colour ( toRGB8, rgbaToWord32 )
+import Rendering.Coord ( Cd2, RstSize )
+import Types ()
+import Util ( unfoldActionM )

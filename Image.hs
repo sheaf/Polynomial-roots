@@ -3,18 +3,14 @@ module Image where
 
 import Overture
 import Prelude ()
-import Control.Monad.IO.Class
 import Data.Colour.Names
-import Data.Foldable
 import qualified Graphics.GD.ByteString.Lazy as GD
-import Pair
-import Settings
-import Rendering.Colour
+
+import Pair (Pair(toTuple))
+import Rendering.Colour (ColourOps(over), toRGB8)
 import Rendering.Raster
-import Rendering.ArrayRaster
-import Rendering.Coord
+import Rendering.Coord (RstCoord)
 import Types hiding (outputSize)
-import Rendering.Gradient
 
 --------------------------------------------------------------------------------
 --Image writing.

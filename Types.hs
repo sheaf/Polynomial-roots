@@ -11,9 +11,8 @@ import Prelude ()
 
 import Configuration hiding (center)
 import Data.Complex
-import Data.Monoid
-import Data.Ratio
-import Rendering.Colour
+import Data.Ratio (Ratio, numerator, denominator)
+import Rendering.Colour (AlphaColour)
 
 --------------------------------------------------------------------------------
 --Basic datatypes.

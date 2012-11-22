@@ -5,17 +5,10 @@ module Plotting where
 
 import Overture
 import Prelude ()
-import qualified Data.Colour.RGBSpace as RGB
-import qualified Data.Colour.RGBSpace.HSV as HSV
 import Control.Applicative
-import Data.Complex
-import Data.Monoid
-import Data.Word
-import Rendering.Gradient
-import Types
-import Interval
-import Rendering.Colour
 
+import Interval (elemI)
+import Types (Pixel)
 
 type PixelOrig = Integer
 

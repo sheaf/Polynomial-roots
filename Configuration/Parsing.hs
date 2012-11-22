@@ -4,19 +4,16 @@ module Configuration.Parsing where
 
 import Overture hiding (between, (<|>), many)
 import Prelude ()
-import Data.Char
-import Data.Colour
-import Data.Colour.SRGB
-import Data.Maybe
-import Data.Ratio
+import Data.Char (toLower)
+import Data.Colour (AlphaColour, withOpacity)
+import Data.Colour.SRGB (sRGB)
+import Data.Maybe (fromJust)
+import Data.Ratio (Ratio, (%))
 import Text.Parsec
-import Text.Parsec.Char
-import Text.Parsec.Combinator
 
 import Configuration
-import Rendering.Coord hiding (elem)
+import Rendering.Coord (Cd2, mkCd2)
 import Rendering.Gradient(gradientNames)
-import Debug.Trace
 
 import Types
 

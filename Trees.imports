@@ -1,0 +1,35 @@
+import Overture
+    ( error,
+      filter,
+      otherwise,
+      ($),
+      Num((-)),
+      Bool(..),
+      Maybe(Just, Nothing),
+      not,
+      reverse,
+      null,
+      uncurry,
+      Category((.)),
+      concatMap,
+      map,
+      length,
+      last,
+      drop,
+      (++),
+      snd )
+import Types
+    ( RealBound,
+      Degree,
+      IterCoeffs,
+      Polynomial,
+      Coefficient(toComplex) )
+import Interval
+    ( ComplexInterval,
+      Interval(elemI, intersects),
+      absI,
+      absD,
+      evaluateD,
+      rectToDisk )
+import Data.Tree ( Tree(Node), Forest )
+import qualified Data.Foldable as F ()

@@ -6,10 +6,9 @@ module Rendering.Gradient where
 import Overture
 import Prelude ()
 
-import Control.Arrow(first,second)
 import Data.Colour.Names
-import Data.List(lookup)
-import Data.Maybe
+import Data.List ( lookup )
+import Data.Maybe ( fromJust )
 import Data.Monoid
 
 import Polynomials

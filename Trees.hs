@@ -2,10 +2,11 @@ module Trees where
 
 import Overture
 import Prelude ()
+
+import Data.Tree (Tree(Node), Forest)
+
 import Types
 import Interval
-import Data.Tree
-import qualified Data.Foldable as F
 
 --------------------------------------------------------------------------------
 --Trees of coefficients as representing polynomials.

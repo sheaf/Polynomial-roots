@@ -5,15 +5,14 @@ module Rendering.ArrayRaster where
 
 import Overture
 import Prelude ()
+
 import Data.IORef
 import Data.Array.MArray
-import Data.Array.IO
-import Data.Monoid
-import Rendering.Raster
+import Data.Array.IO (IOArray)
+
+import Interval (elemI)
 import Rendering.Coord
-import Pair
-import Interval
-import Types hiding (Config(..))
+import Rendering.Raster
 
 data IOArrayRaster val inp out where
     IOArrayRaster :: (Monoid v, MArray IOArray v IO) 

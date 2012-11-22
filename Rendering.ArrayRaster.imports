@@ -1,0 +1,52 @@
+import Overture
+    ( otherwise,
+      ($),
+      fromIntegral,
+      Eq((==)),
+      Fractional((/)),
+      Integral(mod),
+      Monad(return),
+      Functor(..),
+      Num((*), (+), (-)),
+      RealFrac(round),
+      Show(show),
+      Ix(inRange, range),
+      Applicative((<*>)),
+      Traversable(mapM),
+      Integer,
+      IO,
+      Maybe(Just, Nothing),
+      (&&),
+      putStrLn,
+      flip,
+      (=<<),
+      when,
+      Monoid,
+      Category((.), id),
+      Arrow(second),
+      (<$>),
+      liftA2,
+      mapM_,
+      unit,
+      map,
+      (++) )
+import Data.IORef ( IORef, readIORef, newIORef, modifyIORef )
+import Data.Array.MArray
+    ( MArray(getBounds, newArray), writeArray, readArray, getAssocs )
+import Data.Array.IO ( IOArray )
+import Data.Monoid ()
+import Rendering.Raster
+    ( Rasterizer(RstContext, clear, inputBound, mapInput, mapOutput,
+                 mkRasterizer, outputBound, rasterize, readOutput, withOutput) )
+import Rendering.Coord
+    ( InpBounds,
+      InpSize,
+      InpCoord,
+      RstBounds,
+      RstSize,
+      RstCoord,
+      mkCd2,
+      coordToComplex )
+import Pair ()
+import Interval ( Interval(elemI) )
+import Types ()

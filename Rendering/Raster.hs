@@ -4,14 +4,8 @@ module Rendering.Raster where
 
 import Overture
 import Prelude ()
-import Data.Array.MArray
-import Data.Array.IO
-import Data.Monoid
-import Rendering.Coord
-import Pair
-import Interval hiding (Scalar)
-import Types hiding (Config(..))
 
+import Rendering.Coord
 
 class (Applicative (RstContext r), Monad (RstContext r)) => Rasterizer r where
     type RstContext r :: * -> *

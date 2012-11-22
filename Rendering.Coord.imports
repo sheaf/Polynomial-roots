@@ -1,0 +1,8 @@
+import Control.Applicative ( Applicative(pure), (<$>), liftA2 )
+import Data.Foldable ( Foldable, sum, and )
+import Data.Traversable ( Traversable )
+import Data.Monoid ()
+import Data.Ix ( Ix )
+import Data.Complex ( Complex(..) )
+import Pair
+    ( StrictPair(StrictPair), Pair(PairElem, fst, pair, snd) )

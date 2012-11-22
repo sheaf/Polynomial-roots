@@ -2,14 +2,13 @@ module Rendering.Colour ( module Rendering.Colour
                         , module Data.Colour
                         ) where
 
-import Data.Word
+import Data.Word (Word8, Word32)
 import Data.Colour
-import Data.Colour.SRGB (sRGBSpace, toSRGB, toSRGB24)
-import Data.Colour.RGBSpace (RGB(..), uncurryRGB, curryRGB, rgbUsingSpace)
-import Data.Colour.RGBSpace.HSV (hsvView)
-import qualified Data.Colour as C
-import qualified Data.Colour.SRGB as SRGB
-import qualified Data.Colour.RGBSpace.HSV as HSV
+import Data.Colour.SRGB ( sRGBSpace, toSRGB, toSRGB24 )
+import Data.Colour.RGBSpace ( RGB, rgbUsingSpace, uncurryRGB )
+import Data.Colour.RGBSpace.HSV ( hsvView )
+import qualified Data.Colour.SRGB as SRGB ( sRGB )
+import qualified Data.Colour.RGBSpace.HSV as HSV ( hsv )
 
 type RGBColour = Colour Double
 type RGBAColour = AlphaColour Double

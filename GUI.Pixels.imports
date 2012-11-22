@@ -1,0 +1,16 @@
+import Control.Applicative ( Applicative((*>), (<*)), (<$>) )
+import Control.Monad ()
+import Foreign
+    ( Word8, Storable(peekElemOff, pokeElemOff), castPtr )
+import Graphics.UI.SDL
+    ( Surface,
+      Pixel(Pixel),
+      unlockSurface,
+      mapRGB,
+      lockSurface,
+      getRGB,
+      surfaceGetWidth,
+      surfaceGetPixels,
+      surfaceGetPixelFormat )
+import Plotting ()
+import Rendering.Colour ()

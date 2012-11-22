@@ -6,8 +6,8 @@ module Pair where
 import Control.Applicative
 import Data.Foldable
 import Data.Traversable
-import Data.Monoid
-import Data.Ix
+import Data.Monoid (mappend)
+import Data.Ix (Ix)
 import Data.Complex
 import Prelude hiding (fst, snd)
 import qualified Prelude as P

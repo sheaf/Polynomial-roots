@@ -1,0 +1,88 @@
+import Control.Monad.Reader
+    ( guard,
+      liftM,
+      Monad(..),
+      Functor(..),
+      MonadFix(..),
+      MonadPlus(..),
+      sequence_,
+      sequence,
+      mapM_,
+      mapM,
+      (=<<),
+      zipWithM_,
+      zipWithM,
+      when,
+      void,
+      unless,
+      replicateM_,
+      replicateM,
+      msum,
+      mfilter,
+      mapAndUnzipM,
+      liftM5,
+      liftM4,
+      liftM3,
+      liftM2,
+      join,
+      forever,
+      forM_,
+      forM,
+      foldM_,
+      foldM,
+      filterM,
+      ap,
+      (>=>),
+      (<=<),
+      fix,
+      ReaderT(..),
+      MonadTrans(..),
+      MonadIO(..),
+      Reader,
+      MonadReader(..),
+      withReaderT,
+      withReader,
+      runReader,
+      mapReaderT,
+      mapReader,
+      asks )
+import Control.Monad.Identity ( Identity )
+import Control.Monad.Trans ()
+import Control.Applicative
+    ( (<$),
+      Applicative(..),
+      ZipList(..),
+      WrappedMonad(..),
+      WrappedArrow(..),
+      Const(..),
+      Alternative(..),
+      (<$>),
+      optional,
+      liftA3,
+      liftA2,
+      liftA,
+      (<**>) )
+import Control.Category ( Category(), (>>>), (<<<) )
+import Data.Complex
+    ( Complex(..),
+      realPart,
+      polar,
+      phase,
+      mkPolar,
+      magnitude,
+      imagPart,
+      conjugate,
+      cis )
+import Data.Label ( mkLabels )
+import Data.Label.Pure ( :->, set, modify, lens, get )
+import Types
+    ( outputSize,
+      renders,
+      windowCenter,
+      windowSize,
+      Width,
+      Center,
+      Resolution )
+import qualified Types as T ( Config(Config) )
+import qualified Pair as P ( StrictPair(spFst), Pair(toTuple) )
+import Rendering.Coord ( Cd2(getCd2) )

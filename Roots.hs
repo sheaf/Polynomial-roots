@@ -4,17 +4,18 @@ module Roots where
 
 import Overture
 import Prelude ()
+import Data.Tree (flatten)
+import Data.Maybe (fromJust)
+
+--import Numeric.GSL.Polynomials(polySolve)
+import Numeric.LinearAlgebra.LAPACK(eigOnlyR, eigOnlyC)
+
 import Types
 import Trees
-import Data.Tree(flatten)
-import Data.Maybe
 import Interval
-import Plotting
-import Numeric.GSL.Polynomials(polySolve)
-import Numeric.LinearAlgebra.LAPACK(eigOnlyR, eigOnlyC)
 import Foreign.Storable(Storable)
-import qualified Data.Packed.Matrix as M
-import qualified Data.Packed.Vector as V
+import qualified Data.Packed.Matrix as M (Matrix, Element, fromColumns)
+import qualified Data.Packed.Vector as V (fromList, toList)
 
 --------------------------------------------------------------------------------
 --Bound used for pruning trees of polynomials.
@@ -43,11 +44,13 @@ canHaveRoots cfs d cI = concatMap flatten $ constructPolyForest d cfs (bound cfs
 --Root finding.
 
 --Method using GSL library. Currently not used.
+{-
 findRoots' :: Polynomial Double -> [Root]
 findRoots' p
     | length p' <= 1 = []
     | otherwise = polySolve p'
         where p' = reverse . dropWhile (==0) . reverse $ p
+-}
 
 --Alternative using LAPACK.
 findRoots :: Coefficient a => Polynomial a -> [Root]

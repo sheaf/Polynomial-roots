@@ -1,6 +1,6 @@
 module Util where
 
-import Control.Monad
+import Control.Monad (liftM)
 
 unfoldActionM :: (Monad m) => m (Maybe a) -> m [a]
 unfoldActionM mx = step =<< mx

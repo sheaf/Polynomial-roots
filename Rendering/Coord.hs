@@ -3,13 +3,14 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Rendering.Coord where
 
-import Control.Applicative
-import Data.Foldable hiding (elem)
-import Data.Traversable
-import Data.Monoid
-import Data.Ix
-import Data.Complex
 import Prelude hiding (sum, elem, fst, snd, and, or)
+
+import Control.Applicative
+import Data.Complex
+import Data.Foldable ( Foldable, sum, and )
+import Data.Ix ( Ix )
+import Data.Traversable ( Traversable )
+
 import Pair
 
 type RstCoord = Cd2 Int

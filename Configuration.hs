@@ -7,9 +7,8 @@ import Overture
 import Prelude ()
 import Data.Label (mkLabels)
 
-import Pair
-import Rendering.Coord hiding (size)
-import Rendering.Colour
+import Rendering.Coord (Cd2)
+import Rendering.Colour (AlphaColour)
 
 data WindowSpec = WindowSpec { _center :: Cd2 Double
                              , _size   :: Cd2 Double

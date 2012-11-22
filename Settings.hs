@@ -13,18 +13,18 @@ module Settings ( module Settings
                 ) where
 
 import Control.Monad.Reader
-import Control.Monad.Identity
-import Control.Monad.Trans
+import Control.Monad.Identity (Identity)
 import Control.Applicative
 import Control.Category (Category(), (>>>), (<<<))
 import Data.Complex
 import Data.Label (mkLabels)
 import Data.Label.Pure
 
-import Types hiding (Config(..))
-import qualified Types as T
-import qualified Pair as P
-import Rendering.Coord
+import Types (outputSize, renders, windowCenter, windowSize
+             , Width, Center, Resolution)
+import qualified Types as T ( Config(Config) )
+import qualified Pair as P ( StrictPair(spFst), Pair(toTuple) )
+import Rendering.Coord ( Cd2(getCd2) )
 
 type Height = Double
 

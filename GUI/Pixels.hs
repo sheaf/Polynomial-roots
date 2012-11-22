@@ -1,12 +1,9 @@
 module GUI.Pixels where
 
 import Control.Applicative
-import Control.Monad
 import Foreign
 
 import Graphics.UI.SDL
-import Plotting
-import Rendering.Colour
 
 type RGB8 = (Word8, Word8, Word8)
 

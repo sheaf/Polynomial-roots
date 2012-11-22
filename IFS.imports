@@ -1,0 +1,27 @@
+import Overture
+    ( ($),
+      fromIntegral,
+      Fractional((/), recip),
+      Num((*), (+), (-), negate),
+      Bool(False, True),
+      Double,
+      Either(Left, Right),
+      flip,
+      (=<<),
+      Category((.)),
+      Complex(..),
+      map )
+import Interval ( Interval((+!)) )
+import Plotting ()
+import Polynomials ( evaluate, derivative )
+import Roots ( canHaveRoots )
+import Types
+    ( Config(Config),
+      Scaler,
+      IFS,
+      Iterations,
+      Root,
+      Point,
+      IterCoeffs,
+      Polynomial,
+      Coefficient(toComplex) )

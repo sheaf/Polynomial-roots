@@ -9,32 +9,23 @@ module Main where
 
 import Overture hiding(fst,snd)
 import Prelude ()
-import qualified Prelude as P
+import qualified Prelude as P (fst, snd)
 
-import Control.Exception(IOException,handle)
-import Data.Foldable (Foldable, toList)
-import Data.Maybe
-import System.Environment(getArgs)
-import System.IO
-import Text.Parsec hiding(many, optional)
-import qualified Text.Parsec as TP
+import Text.Parsec (ParsecT, try, manyTill, choice, newline, anyChar )
+import qualified Text.Parsec as TP (many, optional)
 
-import qualified Configuration as C
+import qualified Configuration as C (outputSize)
 import Configuration.Parsing
-import IFS
-import Image
-import MainGUI
-import Pair
-import Plotting
-import Rendering.ArrayRaster
-import Rendering.Colour
-import Rendering.Coord
-import Rendering.Gradient
-import Rendering.Raster
-import Roots
-import Settings
+import IFS (ifsPoints)
+import Image (writeImage)
+import MainGUI (guiMain)
+import Pair (Pair(pair))
+import Rendering.ArrayRaster (IOArrayRaster)
+import Rendering.Coord (Cd2, mkCd2)
+import Rendering.Raster (Rasterizer(mkRasterizer))
+import Roots (getRoots)
+import Settings (get, runEnvT, specToSettings)
 import Types
-import qualified Types as T
 
 --------------------------------------------------------------------------------
 --Mode definitions.

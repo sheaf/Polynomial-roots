@@ -3,7 +3,7 @@ module Polynomials where
 import Overture
 import Prelude()
 
-import Types
+import Types (Polynomial, Coefficient)
 
 --------------------------------------------------------------------------------
 --Some routines for polynomials.

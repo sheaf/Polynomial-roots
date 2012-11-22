@@ -1,0 +1,22 @@
+import Data.Word ( Word8, Word32 )
+import Data.Colour
+    ( ColourOps(..),
+      Colour,
+      AlphaColour,
+      AffineSpace(..),
+      withOpacity,
+      transparent,
+      opaque,
+      dissolve,
+      colourConvert,
+      blend,
+      black,
+      atop,
+      alphaColourConvert,
+      alphaChannel )
+import Data.Colour.SRGB ( sRGBSpace, toSRGB, toSRGB24 )
+import Data.Colour.RGBSpace ( RGB, rgbUsingSpace, uncurryRGB )
+import Data.Colour.RGBSpace.HSV ( hsvView )
+import qualified Data.Colour as C ()
+import qualified Data.Colour.SRGB as SRGB ( sRGB )
+import qualified Data.Colour.RGBSpace.HSV as HSV ( hsv )
