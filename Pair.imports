@@ -1,6 +1,0 @@
-import Control.Applicative ( Applicative((<*>), pure), liftA2 )
-import Data.Foldable ( Foldable(foldMap) )
-import Data.Traversable ( Traversable(sequenceA, traverse) )
-import Data.Monoid ( Monoid(mappend) )
-import Data.Ix ( Ix )
-import Data.Complex ( Complex(..) )
