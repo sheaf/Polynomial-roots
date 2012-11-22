@@ -10,5 +10,6 @@
 *.ps
 *.aux
 *.html
+*.imports
 Main
 dist
