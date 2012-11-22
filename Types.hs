@@ -9,6 +9,8 @@ module Types ( module Types
 import Overture
 import Prelude ()
 
+import Control.DeepSeq(NFData)
+
 import Configuration hiding (center)
 import Data.Complex
 import Data.Ratio (Ratio, numerator, denominator)
@@ -21,7 +23,7 @@ import Rendering.Colour (AlphaColour)
 --Have to be able to coerce coefficients into the complex numbers,
 --for polynomial evaluation.
 
-class (Eq a, Num a, Show a, Read a) => Coefficient a where
+class (Eq a, Num a, Show a, Read a, NFData a) => Coefficient a where
     toComplex :: a -> Complex Double
     toAbs     :: a -> Double
     toReal    :: a -> Maybe Double
@@ -102,7 +104,7 @@ type SourceCol  a = (GradientSpec, BG, String, [a], Int)
 type DensityCol   = (GradientSpec, BG, Double) 
                  --gradient, background colour, density
 
-class (Monoid (ColourData c)) => ColourScheme c where
+class (Monoid (ColourData c), NFData (InputData c)) => ColourScheme c where
     type ColourData c :: *
     type InputData  c :: *
     toColour :: c -> ColourData c -> AlphaColour Double

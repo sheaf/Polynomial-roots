@@ -8,6 +8,7 @@ module Main where
 import Overture
 import Prelude ()
 
+import Control.DeepSeq(NFData)
 import Data.Functor.Compose
 
 import qualified Configuration as C (outputSize)
@@ -46,7 +47,7 @@ runAsGui mode cfg col spec = do
     putStrLn "Starting GUI..."
     getPlot mode cfg col spec (runGuiMain mode spec col)
 
-runGuiMain :: (Foldable f, Mode m) => 
+runGuiMain :: (Foldable f, Mode m, NFData i) => 
            m -> RunSpec -> ModeColour m 
            -> f i -> IO (IOArrayRaster v i (ColourData (ModeColour m))) -> IO()
 runGuiMain mode spec col xs r = do rst <- r
@@ -60,9 +61,11 @@ getrb :: RunSpec -> (Cd2 Int, Cd2 Int)
 getrb spec = (mkCd2 0 0, r)
     where r = get (C.outputSize . render) spec
 
-getPlot :: (Mode m) => m -> ModeConfig m -> ModeColour m -> RunSpec
-                    -> (forall f v i. Foldable f => f i -> IO (IOArrayRaster v i (ColourData (ModeColour m))) -> r)
-                    -> r
+getPlot :: (Mode m) 
+        => m -> ModeConfig m -> ModeColour m -> RunSpec
+        -> (forall f v i. (Foldable f, NFData i) 
+            => f i -> IO (IOArrayRaster v i (ColourData (ModeColour m))) -> r)
+        -> r
 getPlot mode cfg col spec k =
     k (getInputData mode cfg) $
     mkRasterizer (\inp -> (pair mkCd2 (toCoord col inp), toData col inp)) (getrb spec) ib

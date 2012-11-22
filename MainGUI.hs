@@ -3,30 +3,34 @@ module MainGUI where
 
 import Overture hiding (mapM_)
 import Prelude ()
+
+import Control.DeepSeq(NFData)
 import Control.Exception (bracket_)
 import Control.Monad.IO.Class (MonadIO(liftIO))
+import Control.Parallel.Strategies(using, parList, rdeepseq)
+import Data.Colour
+import Data.Foldable (Foldable(), toList)
 import GHC.Word (Word16, Word32)
-import System.Directory (doesFileExist)
 import qualified Graphics.UI.SDL as SDL
 import Graphics.UI.SDL.Keysym
 import Graphics.UI.SDL.Events (Event(..))
-import Data.Foldable (Foldable(), toList)
-import Data.Colour
+import System.Directory (doesFileExist)
 
-import Types hiding (Config(..), outputSize)
-import Settings hiding (size)
-import qualified Settings as S (size)
 import Image (dumpImage)
 import Pair (Pair(toTuple))
 import GUI.Pixels (withLock, setPixel)
 import Rendering.Raster
 import Rendering.Colour
 import Rendering.Coord (Cd2, RstSize)
+import qualified Settings as S (size)
+import Settings hiding (size)
+import Types hiding (Config(..), outputSize)
 import Util
 
 type Time = Word32
 
-guiMain :: (Foldable f, ColourScheme c, Rasterizer r, RstContext r ~ IO) 
+guiMain :: (Foldable f, ColourScheme c, Rasterizer r, RstContext r ~ IO
+           , NFData i) 
         => f i -> r v i (ColourData c) -> c -> EnvIO ()
 guiMain xs rst g = bracketSDL (outputSize rst) $ runMainLoop xs rst g
 
@@ -49,15 +53,16 @@ getDisplaySize = toTuple
 endSDL :: EnvIO ()
 endSDL = liftIO SDL.quit
 
-runMainLoop :: (Foldable f, ColourScheme c, Rasterizer r, RstContext r ~ IO) 
+runMainLoop :: (Foldable f, ColourScheme c, Rasterizer r, RstContext r ~ IO
+               , NFData i) 
             => f i -> r v i (ColourData c) -> c -> EnvIO ()
 runMainLoop xs rst c = do s <- liftIO SDL.getVideoSurface
                           liftIO $ SDL.fillRect s Nothing (SDL.Pixel col)
-                          mainLoop (toList xs) rst c
+                          mainLoop (toList xs `using` parList rdeepseq) rst c
                             where bgc = bg c
                                   col = rgbaToWord32 bgc
 
-drawPixel :: (Rasterizer r, RstContext r ~ IO, ColourScheme c) 
+drawPixel :: (Rasterizer r, RstContext r ~ IO, ColourScheme c, NFData i) 
             => r v i (ColourData c) -> c -> SDL.Surface -> i -> IO ()
 drawPixel rst g surf p = do r <- rasterize rst p
                             renderPixel g surf `whenJust` r
@@ -68,12 +73,12 @@ renderPixel c surf (xy, v) = do let bgc = flip over black $ bg c
                                 let col = flip over bgc $ (toColour c) v
                                 setPixel (toTuple xy) (toRGB8 col) surf
 
-mainLoop :: (Rasterizer r, ColourScheme c, RstContext r ~ IO) 
+mainLoop :: (Rasterizer r, ColourScheme c, RstContext r ~ IO, NFData i) 
          => [i] -> r v i (ColourData c) -> c -> EnvIO ()
 mainLoop xs rst g = do xs' <- withMinDelay 5 (timedDraw g rst 5 xs)
                        handleEvents xs' rst g =<< liftIO newEvents
 
-handleEvents :: (Rasterizer r, ColourScheme c, RstContext r ~ IO) 
+handleEvents :: (Rasterizer r, ColourScheme c, RstContext r ~ IO, NFData i) 
              => [i] -> r v i (ColourData c) -> c -> [Event] -> EnvIO ()
 handleEvents xs rst g evs | done      = return ()
                           | otherwise = do mapM_ handleClicks clicks
@@ -118,7 +123,7 @@ withMinDelay dt x = do t1 <- liftIO SDL.getTicks
 delayUntil t = do cur <- SDL.getTicks
                   when (cur < t) (SDL.delay $ t - cur)
 
-timedDraw :: (Rasterizer r, RstContext r ~ IO, ColourScheme c) 
+timedDraw :: (Rasterizer r, RstContext r ~ IO, ColourScheme c, NFData i) 
           => c -> r v i (ColourData c) -> Time -> [i] -> EnvIO [i]
 timedDraw _ _ _ [] = return []
 timedDraw g rst dt xs = do cur <- liftIO SDL.getTicks
