@@ -23,7 +23,6 @@ import qualified Data.Packed.Vector as V (fromList, toList)
 bound :: (Coefficient a) => 
          IterCoeffs a -> ComplexInterval -> RealBound
 bound cfs cI d
-    |1 `elemI` rI = 8 --lousy bound? works for other IterCoeffs?
     |fst rI > 1 = maxcoeff * mini (1 /! rI)
     |otherwise = maxcoeff * mini rI
         where mini rI' = (snd rI')^(d+1) * snd (1 /! (1 -! rI'))
