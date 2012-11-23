@@ -7,14 +7,13 @@ import Types (Polynomial, Coefficient)
 
 import Foreign.Storable(Storable)
 import qualified Data.Packed.Matrix as M (Matrix, Element, fromColumns)
-import qualified Data.Packed.Vector as V (fromList)
+import qualified Data.Packed.Vector as V (Vector, fromList)
 
 --------------------------------------------------------------------------------
 --Some routines for polynomials.
 
 evaluate :: Coefficient a => Polynomial a -> a -> a
-evaluate (a:as) z = a + z * evaluate as z
-evaluate [] _ = 0
+evaluate p z = foldr' (\b w -> b + z * w) 0 p
 
 derivative :: Coefficient a => Polynomial a -> Polynomial a
 derivative = zipWith (*) (map fromIntegral [1..]) . drop 1

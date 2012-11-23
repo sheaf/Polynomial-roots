@@ -174,14 +174,13 @@ absD (c,r) = (mini,maxi)
 --Evaluation of polynomials on intervals.
 
 --Evaluation using Horner scheme method.
-evaluateI :: (Coefficient a, Interval b, a ~ Scalar b)
-             => Polynomial a -> b -> b
-evaluateI (a:as) z = a +! (z * evaluateI as z)
-evaluateI [] _ = fromScalar 0
+evaluateI :: (Coefficient (Scalar b), Interval b)
+             => Polynomial (Scalar b) -> b -> b
+evaluateI p z = foldr' (\b w -> b +! z * w) 0 p 
 
 --Evaluation of polynomials on disks, always producing less spurious results.
 --That is, evaluateD p d is always a subset of evaluateI p d
-evaluateD :: (a ~ Complex Double) => Polynomial a -> Disk -> Disk
+evaluateD :: Polynomial (Complex Double) -> Disk -> Disk
 evaluateD p (c,r) = (c',r')
     where c' = evaluate p c
           r' = evaluate (map magnitude $ 0 : drop 1 (taylor p c)) r
