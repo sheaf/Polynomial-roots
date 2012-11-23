@@ -5,7 +5,7 @@ module Configuration.Parsing where
 import Overture hiding (between, (<|>), many)
 import Prelude ()
 import Data.Char (toLower)
-import Data.Colour (AlphaColour, withOpacity)
+import Data.Colour (Colour, AlphaColour, withOpacity)
 import Data.Colour.SRGB (sRGB)
 import Data.Maybe (fromJust)
 import Data.Ratio (Ratio, (%))
@@ -13,6 +13,7 @@ import Text.Parsec
 
 import Configuration
 import Rendering.Coord (Cd2, mkCd2)
+import qualified Rendering.Colour.Names as C
 import Rendering.Gradient(gradientNames)
 
 import Types
@@ -183,21 +184,33 @@ pGradCollate :: (Monad m) => ParsecT String u m GradientSpec
 pGradCollate = Collate <$> pList (pTuple pColour pDouble) 
 
 pColour :: (Monad m) => ParsecT String u m (AlphaColour Double)
-pColour = do pString "#"
-             hex   <- count 6 (oneOf hexDigits)
-             alpha <- option "FF" $ count 2 (oneOf hexDigits)
-             return $ colourFromHex hex alpha
-             <?> "hex colour value"
-             --todo: add option for reading colour names instead
-                 where hexDigits = "0123456789ABCDEF"
-                       colourFromHex :: String -> String -> AlphaColour Double
-                       colourFromHex hex alpha = sRGB r g b `withOpacity` a
-                           where r' = take 2 hex
-                                 g' = take 2 (drop 2 hex)
-                                 b' = take 2 (drop 4 hex)
-                                 a' = alpha
-                                 [r,g,b,a] = map go [r',g',b',a']
-                                    where go x = (/255) . fromJust . read $ "0x" ++ x
+pColour = try pHexColour
+      <|> pNamedColour
+       
+pHexColour :: (Monad m) => ParsecT String u m (AlphaColour Double)
+pHexColour = do 
+    pString "#"
+    hex   <- count 6 (oneOf hexDigits)
+    alpha <- option "FF" $ count 2 (oneOf hexDigits)
+    return $ colourFromHex hex alpha
+    <?> "hex colour value"
+        where hexDigits = "0123456789AaBbCcDdEeFf"
+              colourFromHex :: String -> String -> AlphaColour Double
+              colourFromHex hex alpha = sRGB r g b `withOpacity` a
+                  where r' = take 2 hex
+                        g' = take 2 (drop 2 hex)
+                        b' = take 2 (drop 4 hex)
+                        a' = alpha
+                        [r,g,b,a] = map go [r',g',b',a']
+                            where go x = (/255) . fromJust . read $ "0x" ++ x
+
+pNamedColour :: (Monad m) => ParsecT String u m (AlphaColour Double)
+pNamedColour = do col <- C.readColourName <$> pStrings (reverse C.names) 
+                        --reversing the (alphabetically ordered) names ensures 
+                        --that no subword occurs before a word containing it
+                  op  <- option 1 (try pDouble)
+                  return $ col `withOpacity` op
+                  <?> "SVG 1.1 colour name"
 
 pTuple :: (Monad m) => ParsecT String u m a -> ParsecT String u m b -> ParsecT String u m (a,b)
 pTuple p q = do pString "("

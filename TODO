@@ -4,14 +4,14 @@ Computation:
 Optimise (better bounds, etc).
 Add parallelisation for trees, roots, ifs, rendering.
 Speed up companion matrix calculation (esp. spurious calculations of companion').
-
-Parsing:
-Change pCd2 etc to allow both tuples and complex numbers.
-Add option to read in named colours as opposed to just hex values.
-Make parsing more consistent and make sure it always works.
+Improve routines in Polynomials module, especially memory consumption.
 
 Colouring:
 Allow output of transparent png files.
+
+Gradients:
+Clean up gradient specifications, and allow parsing of transforms.
+Add more named gradients.
 
 Comments:
 Add comments everywhere, with documentation.
