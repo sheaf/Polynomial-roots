@@ -9,7 +9,6 @@ import Overture
 import Prelude ()
 
 import Control.DeepSeq(NFData)
-import Data.Functor.Compose
 
 import qualified Configuration as C (outputSize)
 import Configuration.Parsing(runParse, pRunSpec)
