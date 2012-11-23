@@ -7,7 +7,7 @@ module Main where
 import Overture
 import Prelude ()
 
-import Control.DeepSeq(NFData)
+import Control.Parallel.Strategies(using, parTraversable, rdeepseq)
 
 import qualified Configuration as C (outputSize)
 import Configuration.Parsing(runParse, pRunSpec)
@@ -45,7 +45,7 @@ runAsGui mode cfg col spec = do
     putStrLn "Starting GUI..."
     getPlot mode cfg col spec (runGuiMain mode spec col)
 
-runGuiMain :: (Foldable f, Mode m, NFData i) => 
+runGuiMain :: (Foldable f, Mode m) => 
            m -> RunSpec -> ModeColour m 
            -> f i -> IO (IOArrayRaster v i (ColourData (ModeColour m))) -> IO()
 runGuiMain mode spec col xs r = do rst <- r
@@ -61,11 +61,11 @@ getrb spec = (mkCd2 0 0, r)
 
 getPlot :: (Mode m) 
         => m -> ModeConfig m -> ModeColour m -> RunSpec
-        -> (forall f v i. (Foldable f, NFData i) 
+        -> (forall f v i. (Foldable f) 
             => f i -> IO (IOArrayRaster v i (ColourData (ModeColour m))) -> r)
         -> r
 getPlot mode cfg col spec k =
-    k (getInputData mode cfg) $
+    k (getInputData mode cfg `using` parTraversable rdeepseq) $
     mkRasterizer (\inp -> (pair mkCd2 (toCoord col inp), toData col inp)) (getrb spec) ib
         where c  = get (windowCenter . render) spec
               s  = get (windowSize   . render) spec

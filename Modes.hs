@@ -53,7 +53,8 @@ instance (PCoefficient a) => Mode (RootsSourceMode a) where
     type ModeColour (RootsSourceMode a) = SourceCol a
     type ModeConfig (RootsSourceMode a) = Config (SourceCol a) a
     type Traversor  (RootsSourceMode a) = Compose [] (Compose Tree [])
-    getInputData _ = Compose . fmap Compose . map (fmap (\(p,rs) -> map (p,) rs)) . getRoots
+    getInputData _ = Compose . fmap Compose 
+                   . map (fmap (\(p,rs) -> map (p,) rs)) . getRoots
     extractCol   _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig  _ = pModeConfig (pSourceCol pCoeff)
 
@@ -61,7 +62,8 @@ instance (PCoefficient a) => Mode (RootsDensityMode a) where
     type ModeColour (RootsDensityMode a) = DensityCol
     type ModeConfig (RootsDensityMode a) = Config DensityCol a
     type Traversor  (RootsDensityMode a) = Compose [] (Compose Tree [])
-    getInputData _ = Compose . fmap Compose . map (fmap snd) . getRoots
+    getInputData _ = Compose . fmap Compose 
+                   . map (fmap snd) . getRoots
     extractCol   _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig  _ = pModeConfig pDensityCol
 

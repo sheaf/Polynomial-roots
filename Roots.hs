@@ -7,6 +7,8 @@ module Roots where
 import Overture
 import Prelude ()
 
+
+import Data.Functor.Compose
 import Data.Tree (Forest)
 import Data.Maybe (fromJust)
 
@@ -89,8 +91,8 @@ getPolys (Config ic (rx, ry) d c w _ _) = canHaveRoots ic d cI
   where h = w * fromIntegral ry / fromIntegral rx
         cI = c +! ((-w/2) :+ (-h/2), (w/2) :+ (h/2))
 
-polyRoots :: (Coefficient a, Functor f) => f (Polynomial a) -> f (Polynomial a, [Root])
-polyRoots polys = (\p -> (p, findRoots p)) <$> polys
+polyRoots :: (Coefficient a) => Polynomial a -> (Polynomial a, [Root])
+polyRoots = id &&& findRoots
 
 getRoots :: (Coefficient a) => Config c a -> Forest (Polynomial a, [Root])
-getRoots cfg = map polyRoots $ getPolys cfg
+getRoots cfg = getCompose . fmap polyRoots . Compose $ getPolys cfg
