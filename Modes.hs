@@ -36,32 +36,32 @@ data RootsDensityMode a = RootsDensityMode
 instance (PCoefficient a) => Mode (IFSDensityMode a) where
     type ModeColour (IFSDensityMode a) = DensityCol
     type ModeConfig (IFSDensityMode a) = Config DensityCol a
-    type Traversor  (IFSDensityMode a) = Tree
-    getInputData _ = (fmap snd) . head . ifsPoints
+    type Traversor  (IFSDensityMode a) = Compose [] Tree
+    getInputData _ = (fmap snd) . Compose . ifsPoints
     extractCol   _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig  _ = pModeConfig pDensityCol
 
 instance (PCoefficient a) => Mode (IFSSourceMode a) where
     type ModeColour (IFSSourceMode a) = SourceCol a
     type ModeConfig (IFSSourceMode a) = Config (SourceCol a) a
-    type Traversor  (IFSSourceMode a) = Tree
-    getInputData _ = head . ifsPoints
+    type Traversor  (IFSSourceMode a) = Compose [] Tree
+    getInputData _ = Compose . ifsPoints
     extractCol   _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig  _ = pModeConfig (pSourceCol pCoeff)
 
 instance (PCoefficient a) => Mode (RootsSourceMode a) where
     type ModeColour (RootsSourceMode a) = SourceCol a
     type ModeConfig (RootsSourceMode a) = Config (SourceCol a) a
-    type Traversor  (RootsSourceMode a) = Compose Tree []
-    getInputData _ = Compose . fmap (\(p,rs) -> map (p,) rs) . head . getRoots
+    type Traversor  (RootsSourceMode a) = Compose [] (Compose Tree [])
+    getInputData _ = Compose . fmap Compose . map (fmap (\(p,rs) -> map (p,) rs)) . getRoots
     extractCol   _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig  _ = pModeConfig (pSourceCol pCoeff)
 
 instance (PCoefficient a) => Mode (RootsDensityMode a) where
     type ModeColour (RootsDensityMode a) = DensityCol
     type ModeConfig (RootsDensityMode a) = Config DensityCol a
-    type Traversor  (RootsDensityMode a) = Compose Tree []
-    getInputData _ = Compose . (fmap snd) . head . getRoots
+    type Traversor  (RootsDensityMode a) = Compose [] (Compose Tree [])
+    getInputData _ = Compose . fmap Compose . map (fmap snd) . getRoots
     extractCol   _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig  _ = pModeConfig pDensityCol
 

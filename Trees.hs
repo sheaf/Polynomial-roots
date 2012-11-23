@@ -3,7 +3,7 @@ module Trees where
 import Overture
 import Prelude ()
 
-import Data.Tree (Tree(Node), Forest)
+import Data.Tree --(Tree(Node), Forest)
 
 import Types
 import Interval
@@ -88,7 +88,7 @@ setCanHaveRoots cI p (Node (c,b) f) = Node (c,b) f'
 constructForest :: (Coefficient a) => 
                  Degree -> IterCoeffs a -> RealBound -> ComplexInterval
                  -> BForest a
-constructForest 0 _ _ _ = [Node (1,True) []]
+constructForest 0 _ _ _ = [Node (1,False) []]
 constructForest d cfs bd cI = pruneLeaves bd cI [] . nextLevelF cfs 
                             $ constructForest (d-1) cfs bd cI
 
