@@ -7,10 +7,10 @@ module Roots where
 import Overture
 import Prelude ()
 
-
 import Data.Functor.Compose
 import Data.Tree (Forest)
 import Data.Maybe (fromJust)
+import Polynomials(companion)
 
 --import Numeric.GSL.Polynomials(polySolve)
 import Numeric.LinearAlgebra.LAPACK(eigOnlyR, eigOnlyC)
@@ -18,9 +18,7 @@ import Numeric.LinearAlgebra.LAPACK(eigOnlyR, eigOnlyC)
 import Types
 import Trees
 import Interval
-import Foreign.Storable(Storable)
-import qualified Data.Packed.Matrix as M (Matrix, Element, fromColumns)
-import qualified Data.Packed.Vector as V (fromList, toList)
+import qualified Data.Packed.Vector as V (toList)
 
 --------------------------------------------------------------------------------
 --Bound used for pruning trees of polynomials.
@@ -66,22 +64,6 @@ findRoots p
               lead = fromJust $ last p'
               pr = map ((/(fromJust.toReal $ lead)).(fromJust.toReal)) p'
               pc = map ((/(toComplex lead)).toComplex) p'
-
---Gives the companion matrix of the given input polynomial, assumed monic.
-companion :: (M.Element a, Storable a, Coefficient a) 
-          => Polynomial a -> M.Matrix a
-companion p = M.fromColumns vcols
-    where n = length p - 1
-          p' = map negate $ take n p
-          cols = companion' n ++ [p']
-          vcols = map V.fromList cols
-
---Companion matrix missing the last column
-companion' :: Num a => Int -> [[a]]
-companion' 1 = [[]]
-companion' 2 = [[0,1]]
-companion' n = nxt $ companion' (n-1)
-    where nxt (l:ls) = (l ++ [0]) : map (0:) (l:ls)
 
 --------------------------------------------------------------------------------
 --Plotting sets of roots.
