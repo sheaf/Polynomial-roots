@@ -54,29 +54,41 @@ pruneLeaves :: (Coefficient a) =>
           -> BForest a -> BForest a
 pruneLeaves _ _ _ [] = []
 pruneLeaves bound cI p (Node (c,_) []:ns)
-    | 0 `elemI` values = Node (c,True) []:ns'
-    | absD values `intersects` (0, bound $ length p) = Node (c,False) []:ns'
+    | 0 `elemI` vals = Node (c,True) []:ns'
+    | absD vals `intersects` (0, bound $ length p) = Node (c,False) []:ns'
         --note: length p is the degree of c:p
     | otherwise = ns'
-        where dI = rectToDisk cI --disk arithmetic gives better results
-              values = evaluateD (map toComplex $ p ++ [c]) dI
+        where dI   = rectToDisk cI --disk arithmetic gives better results
+              vals = evaluateD (map toComplex $ p ++ [c]) dI
               --(evaluateD prunes more efficiently than evaluateI)
-              ns' = pruneLeaves bound cI p ns
+              ns'  = pruneLeaves bound cI p ns
 pruneLeaves bound cI p (Node (c,b) f:ns)
     --bypass, in case pruning can't work
-    | 1 `elemI` absI cI = Node (c,True) f : ns'
+    | 1 `elemI` absI cI = setCanHaveRoots cI p (Node (c,b) f) : ns'
     --end of bypass
     | otherwise = case f' of
                        [] -> ns'
                        _ -> Node (c,b) f' : ns'
         where ns' = pruneLeaves bound cI p ns
-              f' = pruneLeaves bound cI (p++[c]) f
+              f'  = pruneLeaves bound cI (p++[c]) f
+
+--Changes the CanHaveRoots values at the leaves,
+--but doesn't bother to do any pruning.
+setCanHaveRoots :: Coefficient a 
+                => ComplexInterval -> Polynomial a -> BTree a -> BTree a
+setCanHaveRoots cI p (Node (c,_) [])
+    | 0 `elemI` vals = Node (c,True ) []
+    | otherwise      = Node (c,False) []
+        where dI   = rectToDisk cI
+              vals = evaluateD (map toComplex $ p ++ [c]) dI
+setCanHaveRoots cI p (Node (c,b) f) = Node (c,b) f'
+    where f' = map (setCanHaveRoots cI (p++[c])) f 
 
 --Constructs a pruned version of the tree of polynomials.
 constructForest :: (Coefficient a) => 
                  Degree -> IterCoeffs a -> RealBound -> ComplexInterval
                  -> BForest a
-constructForest 0 _ _ _ = [Node (1,False) []]
+constructForest 0 _ _ _ = [Node (1,True) []]
 constructForest d cfs bd cI = pruneLeaves bd cI [] . nextLevelF cfs 
                             $ constructForest (d-1) cfs bd cI
 
