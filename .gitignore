@@ -11,5 +11,6 @@
 *.aux
 *.html
 *.imports
+*.eventlog
 Main
 dist
