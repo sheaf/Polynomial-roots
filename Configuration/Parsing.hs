@@ -57,12 +57,12 @@ pRunMode = pString "gui" *> return WithGUI
 pRenderSpec :: (Monad m) => ParsecT String u m RenderSpec
 pRenderSpec = do pString "{" 
                  many newline
-                 ctr <- pField "center" *> pCd2 pDouble
+                 ctr <- pField "center" *> ((\(x:+y) -> mkCd2 x y) <$> pAnyComplex pDouble)
                  pFieldSep
-                 rSz <- pField "size" *> pCd2 pDouble
+                 rSz <- pField "size" *> (uncurry mkCd2 <$> pAnyPair pDouble)
                  pFieldSep
                  let rSpec = WindowSpec ctr rSz
-                 sz <- pField "output-size" *> pCd2 pInt
+                 sz <- pField "output-size" *> (uncurry mkCd2 <$> pAnyPair pNat)
                  pFieldSep
                  fixAsp <- pField "fix-aspect" *> pEnumerated
                  optional pFieldSep
@@ -76,11 +76,11 @@ pModeConfig p = do manyTill anyChar (try (newline *> string "mode"))
                    many newline
                    cfs <- pField "coefficients" *> pList pCoeff
                    pFieldSep
-                   res <- pField "resolution" *> pPair pNat
+                   res <- pField "resolution" *> pAnyPair pNat
                    pFieldSep
                    deg <- pField "degree" *> pNat
                    pFieldSep
-                   ctr <- pField "center" *> ( uncurry (:+) <$> pPair pDouble)
+                   ctr <- pField "center" *> pAnyComplex pDouble
                    pFieldSep
                    w <- pField "width" *> pDouble
                    pFieldSep
@@ -199,24 +199,24 @@ pColour = do pString "#"
                                  [r,g,b,a] = map go [r',g',b',a']
                                     where go x = (/255) . fromJust . read $ "0x" ++ x
 
-pCd2 :: (Monad m) => ParsecT String u m a -> ParsecT String u m (Cd2 a)
-pCd2 p = mkCd2 <$> p <*> p
-         <?> "two values"
-
 pTuple :: (Monad m) => ParsecT String u m a -> ParsecT String u m b -> ParsecT String u m (a,b)
 pTuple p q = do pString "("
-                spaces
                 a <- p
-                spaces
                 pString ","
-                spaces
                 b <- q
-                spaces
                 pString ")"
                 return (a,b)
-                <?> "pair"
+                <?> "ordered pair"
 
+pPair, pAnyPair :: (Monad m) => ParsecT String u m a -> ParsecT String u m (a,a)
 pPair p = pTuple p p
+pAnyPair p = try $ pPair p 
+         <|> ((,) <$> p <*> p <?> "two values")
+
+pAnyComplex :: (Monad m, Num a, RealFloat a) 
+         => ParsecT String u m a -> ParsecT String u m (Complex a)
+pAnyComplex p = uncurry (:+) <$> try ( pAnyPair p)
+            <|> pComplex p
 
 pRatio :: (Monad m, Integral a) => ParsecT String u m a -> ParsecT String u m (Ratio a)
 pRatio p = do n <- p
@@ -259,7 +259,7 @@ pComplex p = do s1 <- option id pm
                 z1 <- q
                 z2 <- option (0 :+ 0) q'
                 return $ s1 z1 + z2
-                <?> "complex number"
+                <?> "complex coordinates"
                     where q = do try $ pString "i" *>
                                           choice [ pm *> return (0:+1)
                                                  , (0 :+) <$> option 1 p]
