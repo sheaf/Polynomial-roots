@@ -2,7 +2,8 @@ TODO:
 
 Computation:
 Optimise (better bounds, etc).
-Add parallelisation.
+Add parallelisation for trees, roots, ifs, rendering.
+Speed up companion matrix calculation (esp. spurious calculations of companion').
 
 Parsing:
 Change pCd2 etc to allow both tuples and complex numbers.
