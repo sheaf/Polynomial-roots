@@ -5,7 +5,7 @@ module Configuration.Parsing where
 import Overture hiding (between, (<|>), many)
 import Prelude ()
 import Data.Char (toLower)
-import Data.Colour (Colour, AlphaColour, withOpacity)
+import Data.Colour (AlphaColour, withOpacity)
 import Data.Colour.SRGB (sRGB)
 import Data.Maybe (fromJust)
 import Data.Ratio (Ratio, (%))
@@ -110,23 +110,21 @@ pDensityCol = do many newline
                  pString "}"
                  return (grad, bgc, op)
 
-pSourceCol :: (Monad m) => ParsecT String u m a -> ParsecT String u m (SourceCol a)
-pSourceCol pCf = do many newline
-                    pString "{"
-                    many newline
-                    grad <- pField "gradient" *> pGradSpec
-                    pFieldSep
-                    bgc <- pField "background" *> pColour
-                    pFieldSep
-                    method <- pField "method" *> pStrings ["1","2"]
-                    pFieldSep
-                    coeffs <- pField "coefficients" *> pList pCf
-                    pFieldSep
-                    t <- pField "truncate" *> pNat
-                    optional $ pFieldSep
-                    many newline
-                    pString "}"
-                    return (grad, bgc, method, coeffs, t)
+pSourceCol :: (Monad m) => ParsecT String u m SourceColB
+pSourceCol = do many newline
+                pString "{"
+                many newline
+                grad <- pField "gradient" *> pGradSpec
+                pFieldSep
+                bgc <- pField "background" *> pColour
+                pFieldSep
+                method <- pField "method" *> pStrings ["1","2"]
+                pFieldSep
+                t <- pField "truncate" *> pNat
+                optional $ pFieldSep
+                many newline
+                pString "}"
+                return (grad, bgc, method, t)
 
 pFieldSep :: (Monad m) => ParsecT String u m String
 pFieldSep = many1 pNewline

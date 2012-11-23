@@ -43,20 +43,20 @@ instance (PCoefficient a) => Mode (IFSDensityMode a) where
 
 instance (PCoefficient a) => Mode (IFSSourceMode a) where
     type ModeColour (IFSSourceMode a) = SourceCol a
-    type ModeConfig (IFSSourceMode a) = Config (SourceCol a) a
+    type ModeConfig (IFSSourceMode a) = Config SourceColB a
     type Traversor  (IFSSourceMode a) = Compose [] Tree
     getInputData _ = Compose . ifsPoints
-    extractCol   _ = (\ (Config _ _ _ _ _ _ g) -> g)
-    parseConfig  _ = pModeConfig (pSourceCol pCoeff)
+    extractCol   _ = (\ (Config cfs _ _ _ _ _ g) -> addCfs cfs g)
+    parseConfig  _ = pModeConfig pSourceCol
 
 instance (PCoefficient a) => Mode (RootsSourceMode a) where
     type ModeColour (RootsSourceMode a) = SourceCol a
-    type ModeConfig (RootsSourceMode a) = Config (SourceCol a) a
+    type ModeConfig (RootsSourceMode a) = Config SourceColB a
     type Traversor  (RootsSourceMode a) = Compose [] (Compose Tree [])
     getInputData _ = Compose . fmap Compose 
                    . map (fmap (\(p,rs) -> map (p,) rs)) . getRoots
-    extractCol   _ = (\ (Config _ _ _ _ _ _ g) -> g)
-    parseConfig  _ = pModeConfig (pSourceCol pCoeff)
+    extractCol   _ = (\ (Config cfs _ _ _ _ _ g) -> addCfs cfs g)
+    parseConfig  _ = pModeConfig pSourceCol
 
 instance (PCoefficient a) => Mode (RootsDensityMode a) where
     type ModeColour (RootsDensityMode a) = DensityCol

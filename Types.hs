@@ -101,8 +101,12 @@ data Config c a = Config { coefficients :: [a]
 --Colouring schemes.
 type SourceCol  a = (GradientSpec, BG, String, [a], Int) 
                  --gradient, background colour, method, coefficients, truncation
+type SourceColB   = (GradientSpec, BG, String, Int) 
 type DensityCol   = (GradientSpec, BG, Double) 
                  --gradient, background colour, density
+
+addCfs :: [a] -> SourceColB -> SourceCol a
+addCfs d (a,b,c,e) = (a,b,c,d,e)
 
 class (Monoid (ColourData c), NFData (InputData c)) => ColourScheme c where
     type ColourData c :: *
