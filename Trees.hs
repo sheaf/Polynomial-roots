@@ -3,7 +3,7 @@ module Trees where
 import Overture
 import Prelude ()
 
-import Data.Tree --(Tree(Node), Forest)
+import Data.Tree (Tree(Node), Forest)
 
 import Types
 import Interval
