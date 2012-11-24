@@ -8,10 +8,10 @@ Improve routines in Polynomials module, especially memory consumption.
 
 Colouring:
 Allow output of transparent png files.
+Change strings to Word8, Word24 etc in hex parsing.
 
 Gradients:
 Clean up gradient specifications, and allow parsing of transforms.
-Add more named gradients.
 
 Comments:
 Add comments everywhere, with documentation.

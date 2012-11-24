@@ -13,6 +13,7 @@ import Text.Parsec
 
 import Configuration
 import Rendering.Coord (Cd2, mkCd2)
+import Rendering.Colour (aColourFromHex)
 import qualified Rendering.Colour.Names as C
 import Rendering.Gradient(gradientNames)
 
@@ -150,7 +151,9 @@ pGradSpec :: (Monad m) => ParsecT String u m GradientSpec
 pGradSpec = choice [pGradName, pGradSplit, pGradCmb, pGradCollate]
 
 pGradName :: (Monad m) => ParsecT String u m GradientSpec
-pGradName = do name <- pStrings gradientNames
+pGradName = do name <- pStrings (reverse gradientNames)
+                        --reversing the (alphabetically ordered) names ensures 
+                        --that no subword occurs before a word containing it
                op   <- optionMaybe (try pDouble)
                return $ NamedGradient (name, op)
 
@@ -190,22 +193,13 @@ pHexColour = do
     pString "#"
     hex   <- count 6 (oneOf hexDigits)
     alpha <- option "FF" $ count 2 (oneOf hexDigits)
-    return $ colourFromHex hex alpha
+    return $ aColourFromHex hex alpha
     <?> "hex colour value"
         where hexDigits = "0123456789AaBbCcDdEeFf"
-              colourFromHex :: String -> String -> AlphaColour Double
-              colourFromHex hex alpha = sRGB r g b `withOpacity` a
-                  where r' = take 2 hex
-                        g' = take 2 (drop 2 hex)
-                        b' = take 2 (drop 4 hex)
-                        a' = alpha
-                        [r,g,b,a] = map go [r',g',b',a']
-                            where go x = (/255) . fromJust . read $ "0x" ++ x
 
 pNamedColour :: (Monad m) => ParsecT String u m (AlphaColour Double)
-pNamedColour = do col <- C.readColourName <$> pStrings (reverse C.names) 
-                        --reversing the (alphabetically ordered) names ensures 
-                        --that no subword occurs before a word containing it
+pNamedColour = do col <- C.readColourName <$> pStrings (reverse C.colourNames) 
+                        --as above, reversing allows proper parsing
                   op  <- option 1 (try pDouble)
                   return $ col `withOpacity` op
                   <?> "SVG 1.1 colour name"

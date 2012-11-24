@@ -9,10 +9,12 @@ import Prelude ()
 import Data.Colour.Names
 import Data.List ( lookup )
 import Data.Maybe ( fromJust )
+import qualified Data.Map as Map (lookup)
 import Data.Monoid
 
 import Polynomials
 import Rendering.Colour
+import qualified Rendering.Colour.Names as Names (gradientDict, gradientNames)
 import Types
 
 apGrad :: m -> Gradient m f a -> f a
@@ -86,30 +88,22 @@ opacify bg = onOutput (`over` bg)
 fadeIn c = linear (opaque c) transparent
 fadeOut c = linear transparent (opaque c)
 
-warm, cold, sunset :: Double -> Gradient Double AlphaColour Double
-warm   o = collateWithOp o [(black,0),(red   ,1/3),(yellow   ,2/3),(white    ,1)]
-cold   o = collateWithOp o [(black,0),(blue  ,1/3),(cyan     ,2/3),(white    ,1)]
-sunset o = collateWithOp o [(black,0),(purple,1/5),(firebrick,2/5),(goldenrod,1/2)
-                           ,(orange,3/5),(white,1)]
-
-monochrome' = constant (opaque white)
-monochrome = Just Grad { runGrad = runGrad monochrome'}
+monochrome = withOpacity
+monochrome' o c = Grad { runGrad = runGrad (monochrome' o c)}
 hsvGrad' o d = flip withOpacity o $ hsv d 1 1
 hsvGrad o = Grad { runGrad = hsvGrad' o }
 
 gradientByName' :: String -> (Double -> Gradient Double AlphaColour Double)
-gradientByName' "warm"   = warm
-gradientByName' "mraw"   = reverseGrad . warm
-gradientByName' "cold"   = cold
-gradientByName' "sunset" = sunset
-gradientByName' "hsv"    = hsvGrad
-gradientByName' s        = error $ "unrecognised gradient name: " ++ s
+gradientByName' "hsv" = hsvGrad
+gradientByName' s = case Map.lookup s Names.gradientDict of
+                         Just g -> flip collateWithOp g
+                         _      -> error $ "unrecognised gradient name: " ++ s
+
+gradientNames = "hsv" : Names.gradientNames
 
 gradientByName (s,d) = case d of
                             Just d' -> Just $ gradientByName' s d'
                             Nothing -> Just $ gradientByName' s 1
-
-gradientNames = ["warm", "mraw", "cold", "sunset", "hsv"]
 
 gradientFromSpec def bg gSpec = opacify bg $ fromExpr gSpec ?? def
 
