@@ -72,16 +72,16 @@ instance (PCoefficient a) => Mode (RootsDensityMode a) where
 
 data AnyMode = forall m. (Mode m) => AnyMode m
 data AnyConfig = forall m. (Mode m) => AnyConfig m (ModeConfig m) (ModeColour m)
-data AnyPCoeff = forall a. (PCoefficient a) => PCoeff a
 
 --------------------------------------------------------------------------------
 --Parsing.
 
 pAnyMode :: Monad m => ParsecT String u m AnyMode
 pAnyMode = do manyTill anyChar (try $ newline *> pString "mode")
-              mode <- pField "" *> ((,,) <$> choice [pString "roots", pString "ifs"] 
-                                         <*> choice [pString "source", pString "density"]
-                                         <*> choice [pString "int", pString "double", pString "complex", pString "rational"])
+              mode <- pField "" *> ((,,) <$> pStrings ["roots","ifs"]
+                                         <*> pStrings ["source", "density"]
+                                         <*> pStrings ["int", "double"
+                                                      ,"rational", "complex"])
               optional pFieldSep
               many newline
               pString "{"
