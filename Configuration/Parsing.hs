@@ -151,7 +151,7 @@ pGradSpec :: (Monad m) => ParsecT String u m GradientSpec
 pGradSpec = choice [pGradName, pGradSplit, pGradCmb, pGradCollate]
 
 pGradName :: (Monad m) => ParsecT String u m GradientSpec
-pGradName = do name <- pStrings (reverse gradientNames)
+pGradName = do name <- pStrings (reverse gradientNames) <?> "named gradient"
                         --reversing the (alphabetically ordered) names ensures 
                         --that no subword occurs before a word containing it
                op   <- optionMaybe (try pDouble)
@@ -185,17 +185,15 @@ pGradCollate :: (Monad m) => ParsecT String u m GradientSpec
 pGradCollate = Collate <$> pList (pTuple pColour pDouble) 
 
 pColour :: (Monad m) => ParsecT String u m (AlphaColour Double)
-pColour = try pHexColour
+pColour = string "#" *> try pHexColour
       <|> pNamedColour
        
 pHexColour :: (Monad m) => ParsecT String u m (AlphaColour Double)
-pHexColour = do 
-    string "#"
-    hex   <- count 6 (oneOf hexDigits)
-    alpha <- option "FF" $ count 2 (oneOf hexDigits)
-    return $ aColourFromHex hex alpha
-    <?> "hex colour value"
-        where hexDigits = "0123456789AaBbCcDdEeFf"
+pHexColour = do hex   <- count 6 (oneOf hexDigits)
+                alpha <- option "FF" $ count 2 (oneOf hexDigits)
+                return $ aColourFromHex hex alpha
+            <?> "hex colour value"
+                    where hexDigits = "0123456789AaBbCcDdEeFf"
 
 pNamedColour :: (Monad m) => ParsecT String u m (AlphaColour Double)
 pNamedColour = do col <- C.readColourName <$> pStrings (reverse C.colourNames) 
@@ -317,7 +315,7 @@ doubleVal = do pm  <- option ' ' (oneOf "+-")
 
 insensitiveString :: (Monad m) => String -> ParsecT String u m String
 insensitiveString str = try (mapM insensitiveChar str)
-                    <?> str
+                    <?> "'" ++ str ++ "'"
 
 insensitiveChar :: (Monad m) => Char -> ParsecT String u m Char
 insensitiveChar c = satisfy $ (toLower c ==) . toLower
