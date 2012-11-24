@@ -190,7 +190,7 @@ pColour = try pHexColour
        
 pHexColour :: (Monad m) => ParsecT String u m (AlphaColour Double)
 pHexColour = do 
-    pString "#"
+    string "#"
     hex   <- count 6 (oneOf hexDigits)
     alpha <- option "FF" $ count 2 (oneOf hexDigits)
     return $ aColourFromHex hex alpha
