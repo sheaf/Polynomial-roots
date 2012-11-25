@@ -36,9 +36,7 @@ runAsCmd :: Mode m => m -> ModeConfig m -> ModeColour m -> RunSpec -> IO ()
 runAsCmd mode cfg col spec = do
     routine mode cfg col spec
     putStrLn ""
-    putStrLn "All done here! Press enter to quit."
-    getLine
-    putStrLn "Bye!"
+    putStrLn "All done here. Bye!"
 
 runAsGui :: Mode m => m -> ModeConfig m -> ModeColour m -> RunSpec -> IO ()
 runAsGui mode cfg col spec = do
