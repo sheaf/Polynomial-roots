@@ -73,8 +73,6 @@ getPolys (Config ic (rx, ry) d c w _ _) = canHaveRoots ic d cI
   where h = w * fromIntegral ry / fromIntegral rx
         cI = c +! ((-w/2) :+ (-h/2), (w/2) :+ (h/2))
 
-polyRoots :: (Coefficient a) => Polynomial a -> (Polynomial a, [Root])
-polyRoots = id &&& findRoots
-
-getRoots :: (Coefficient a) => Config c a -> Forest (Polynomial a, [Root])
-getRoots cfg = getCompose . fmap polyRoots . Compose $ getPolys cfg
+getRoots :: (Coefficient a) => ((Polynomial a -> [Root]) -> (Polynomial a -> b))
+         -> Config c a -> Forest b
+getRoots q cfg = getCompose . fmap (q findRoots) . Compose $ getPolys cfg

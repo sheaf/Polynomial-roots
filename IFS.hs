@@ -19,16 +19,19 @@ scalePoint :: (Coefficient a) => Complex Double -> Scaler a -- Scaler a ~ (Compl
 scalePoint c z p = z * scale
     where scale = (negate . recip . (`evaluate` c)) . derivative . map toComplex $ p
 
-ifsCounts :: (Coefficient a) => Config c a -> Scaler a -> Forest (Polynomial a) -> Forest (Polynomial a, Root)
-ifsCounts (Config _ _ _ c _ _ _) f ps = points
-    where points = (map . fmap) (\p -> (p,f (flip evaluate c . map toComplex $ p) p)) ps
+ifsCounts :: (Coefficient a) => ((Polynomial a -> Root) -> (Polynomial a -> b))
+          -> Config c a -> Scaler a -> Forest (Polynomial a) -> Forest b
+ifsCounts q (Config _ _ _ c _ _ _) f forest = rootForest
+    where eval       = flip evaluate c . map toComplex
+          rootForest = (map . fmap) (q $ uncurry f . (eval &&& id)) forest
 
-ifsPoints :: (Coefficient a) => Config c a -> Forest (Polynomial a, Root)
-ifsPoints cfg@(Config ic (rx,ry) d c w s g) = ifspoints
+ifsPoints :: (Coefficient a) => ((Polynomial a -> Root) -> (Polynomial a -> b))
+          -> Config c a -> Forest b
+ifsPoints q cfg@(Config ic (rx,ry) d c w s g) = ifsForest
   where h = (w* fromIntegral(ry) / (fromIntegral(rx)))::Double
         cI = c +! ((-w/2) :+ (-h/2),(w/2) :+ (h/2))
-        pols = canHaveRoots ic d cI
-        ifspoints = ifsCounts cfg scaling pols
+        forest = canHaveRoots ic d cI
+        ifsForest = ifsCounts q cfg scaling forest
         scaling = case s of
                        Left False -> \z p -> z
                        Left True  -> scalePoint c
