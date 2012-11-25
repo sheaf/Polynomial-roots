@@ -10,7 +10,7 @@ import Prelude ()
 import Data.Functor.Compose
 import Data.Tree (Forest)
 import Data.Maybe (fromJust)
-import Polynomials(companion)
+import Polynomials(companion, trim)
 
 --import Numeric.GSL.Polynomials(polySolve)
 import Numeric.LinearAlgebra.LAPACK(eigOnlyR, eigOnlyC)
@@ -46,31 +46,31 @@ canHaveRoots cfs d cI = constructPolyForest d cfs (bound cfs cI) cI
 --Root finding.
 
 {---Method using GSL library. Currently not used.
-findRoots' :: Polynomial Double -> [Root]
+findRoots, findRoots' :: Polynomial Double -> [Root]
+findRoots = findRoots' . trim
 findRoots' p
-    | length p' <= 1 = []
-    | otherwise = polySolve p'
-        where p' = reverse . dropWhile (==0) . reverse $ p
+    | length p <= 1 = []
+    | otherwise     = polySolve p
 -}
 
 --Alternative using LAPACK.
-findRoots :: Coefficient a => Polynomial a -> [Root]
-findRoots p
-    | length p' <= 1 = []
-    | length p' == 2 = let [b,a] = p' in [- toComplex b / toComplex a]
+findRoots, findRoots' :: Coefficient a => Polynomial a -> [Root]
+findRoots = findRoots' . trim
+findRoots' p
+    | length p <= 1           = []
+    | length p == 2           = let [b,a] = p in [- toComplex b / toComplex a]
     | isNothing (toReal lead) = V.toList $ eigOnlyC (companion pc)
-    | otherwise = V.toList $ eigOnlyR (companion pr)
-        where p' = reverse . dropWhile (==0) . reverse $ p
-              lead = fromJust $ last p'
-              pr = map ((/(fromJust.toReal $ lead)).(fromJust.toReal)) p'
-              pc = map ((/(toComplex lead)).toComplex) p'
+    | otherwise               = V.toList $ eigOnlyR (companion pr)
+        where lead = fromJust $ last p
+              pr   = map ((/(fromJust.toReal $ lead)).(fromJust.toReal)) p
+              pc   = map ((/(toComplex lead)).toComplex) p
 
 --------------------------------------------------------------------------------
 --Plotting sets of roots.
 
 getPolys :: (Coefficient a) => Config c a -> Forest (Polynomial a)
 getPolys (Config ic (rx, ry) d c w _ _) = canHaveRoots ic d cI
-  where h = w * fromIntegral ry / fromIntegral rx
+  where h  = w * fromIntegral ry / fromIntegral rx
         cI = c +! ((-w/2) :+ (-h/2), (w/2) :+ (h/2))
 
 getRoots :: (Coefficient a) => ((Polynomial a -> [Root]) -> (Polynomial a -> b))

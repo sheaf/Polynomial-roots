@@ -12,6 +12,9 @@ import qualified Data.Packed.Vector as V (Vector, fromList)
 --------------------------------------------------------------------------------
 --Some routines for polynomials.
 
+trim :: Coefficient a => Polynomial a -> Polynomial a
+trim = reverse . dropWhile (==0) . reverse
+
 evaluate :: Coefficient a => Polynomial a -> a -> a
 evaluate p z = foldr' (\b w -> b + z * w) 0 p
 
