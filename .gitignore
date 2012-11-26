@@ -12,5 +12,7 @@
 *.html
 *.imports
 *.eventlog
+*.svg
+*.txt
 Main
 dist
