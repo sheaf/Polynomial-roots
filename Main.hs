@@ -7,6 +7,9 @@ module Main where
 import Overture
 import Prelude ()
 
+import System.Directory(doesFileExist)
+import System.Environment(getArgs)
+
 import qualified Configuration as C (outputSize)
 import Configuration.Parsing(runParse, pRunSpec)
 import Image (writeImage)
@@ -18,21 +21,23 @@ import Rendering.Coord (Cd2(..), mkCd2)
 import Rendering.Raster (Rasterizer(mkRasterizer))
 import Settings (get, runEnvT, specToSettings)
 import Types
+import Util
 
 --------------------------------------------------------------------------------
 --Routines.
 
-routine :: Mode m => m -> ModeConfig m -> ModeColour m -> RunSpec -> IO()
-routine mode cfg col spec = do
+routine :: Mode m 
+        => m -> ModeConfig m -> ModeColour m -> RunSpec -> String -> IO()
+routine mode cfg col spec file = do
     putStrLn "Starting routine."
     putStrLn $ "I'm going to write to file '" ++ file ++ "'."
     getPlot mode cfg col spec (runWriteImage file col)
     putStrLn $ "Done writing to file '" ++ file ++"'. Finished routine."
-  where file = "image.png"
 
-runAsCmd :: Mode m => m -> ModeConfig m -> ModeColour m -> RunSpec -> IO ()
-runAsCmd mode cfg col spec = do
-    routine mode cfg col spec
+runAsCmd :: Mode m 
+         => m -> ModeConfig m -> ModeColour m -> RunSpec -> String -> IO()
+runAsCmd mode cfg col spec file = do
+    routine mode cfg col spec file
     putStrLn ""
     putStrLn "All done here. Bye!"
 
@@ -62,7 +67,9 @@ getPlot :: (Mode m)
         -> r
 getPlot mode cfg col spec k =
     k (getInputData mode cfg) $
-    mkRasterizer (\inp -> (pair mkCd2 (toCoord col inp), toData col inp)) (getrb spec) ib
+    mkRasterizer (\inp -> (pair mkCd2 (toCoord col inp), toData col inp)) 
+                 (getrb spec) 
+                 ib
         where c  = get (windowCenter . render) spec
               s  = get (windowSize   . render) spec
               s' = (s*) $ mkCd2 0.5 0.5
@@ -71,33 +78,39 @@ getPlot mode cfg col spec k =
 --------------------------------------------------------------------------------
 --Config handling.
 
-mkFromConfig :: AnyConfig -> RunSpec -> IO()
+mkFromConfig :: AnyConfig -> RunSpec -> String -> IO()
 mkFromConfig (AnyConfig mode cfg col) = mkFromConfig' mode cfg col
 
-mkFromConfig' :: Mode m => m -> ModeConfig m -> ModeColour m -> RunSpec -> IO()
-mkFromConfig' mode cfg col spec = case get runMode spec of 
-                                       WithGUI   -> runAsGui mode cfg col spec
-                                       ImageFile -> runAsCmd mode cfg col spec
+mkFromConfig' :: Mode m 
+              => m -> ModeConfig m -> ModeColour m -> RunSpec -> String -> IO()
+mkFromConfig' mode cfg col spec file = 
+    case get runMode spec of 
+         WithGUI   -> runAsGui mode cfg col spec
+         ImageFile -> runAsCmd mode cfg col spec file
 
 --------------------------------------------------------------------------------
 --Main.
 
-writeError :: String -> IO()
-writeError s = do putStrLn "Parse error:"
-                  putStrLn s
-                  putStrLn "Terminating application."
-
 main :: IO()
 main = do
+    args <- getArgs
+    def_imagefn <- nextImageName (\n -> case n of
+                                             1 -> "image.png"
+                                             n -> "image" ++ show n ++ ".png")
+    let imagefn = case filter (endsWith ".png") args of
+                       (x:_) -> x
+                       _     -> def_imagefn
+    let cfgfn   = case filter (endsWith ".config") args of
+                       (x:_) -> x
+                       _     -> "roots.config"
     putStrLn "This program produces images of polynomial roots."
-    putStrLn "Reading configuration from file 'roots.config'."
-    let fn = "roots.config"
-    spec <- runParse pRunSpec fn =<< readFile fn
-    mode <- runParse pAnyMode fn =<< readFile fn
+    putStrLn $ "Reading configuration from file '" ++ cfgfn ++ "'."
+    spec <- runParse pRunSpec cfgfn =<< readFile cfgfn
+    mode <- runParse pAnyMode cfgfn =<< readFile cfgfn
     case (spec, mode) of
-         (Left s,_) -> writeError s
-         (_,Left s) -> writeError s
-         (Right rspec, Right rmode) -> do cfg <- modeConfigFromMode fn rmode
+         (Left s,_) -> printParseError s
+         (_,Left s) -> printParseError s
+         (Right rspec, Right rmode) -> do cfg <- modeConfigFromMode cfgfn rmode
                                           case cfg of
-                                               Left s     -> writeError s
-                                               Right rcfg -> mkFromConfig rcfg rspec
+                                               Left s     -> printParseError s
+                                               Right rcfg -> mkFromConfig rcfg rspec imagefn

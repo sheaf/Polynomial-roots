@@ -102,13 +102,11 @@ getKeys _ = Nothing
 handleKeys rst g (Keysym SDLK_s _ _) = liftIO $ dumpGUIImage rst g
 handleKeys _ _ _ = return ()
 
-dumpGUIImage rst g = do fn <- nextImageName $ mkImageName <$> [1..]
+dumpGUIImage rst g = do fn <- nextImageName f
                         putStrLn $ "Saving to image: " ++ fn
                         dumpImage rst g fn
                         putStrLn "Image saved."
-  where mkImageName n = "gui_dump_" ++ show n ++ ".png"
-        nextImageName (n:ns) = do exists <- doesFileExist n
-                                  if exists then nextImageName ns else return n
+    where f n = "gui_dump_" ++ show n ++ ".png"
 
 withMinDelay :: Time -> EnvIO a -> EnvIO a
 withMinDelay dt x = do t1 <- liftIO SDL.getTicks
