@@ -12,6 +12,15 @@ import Types
 --Interval arithmetic.
 --Inexact operations (which introduce spurious results) are indicated.
 
+infix 6 +!
+infix 6 !+
+infix 6 -!
+infix 6 !-
+infix 7 *!
+infix 7 !*
+infix 7 /!
+infix 7 !/
+
 class (Fractional a, Fractional (Scalar a)) => Interval a where
     type Scalar a :: *
     intersects :: a -> a -> Bool
@@ -176,7 +185,7 @@ absD (c,r) = (mini,maxi)
 --Evaluation using Horner scheme method.
 evaluateI :: (Coefficient (Scalar b), Interval b)
              => Polynomial (Scalar b) -> b -> b
-evaluateI p z = foldr' (\b w -> b +! z * w) 0 p 
+evaluateI p cI = foldr' (\b w -> b +! cI * w) 0 p 
 
 --Evaluation of polynomials on disks, always producing less spurious results.
 --That is, evaluateD p d is always a subset of evaluateI p d
