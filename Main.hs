@@ -96,7 +96,7 @@ main = do
     args <- getArgs
     def_imagefn <- nextImageName (\n -> case n of
                                              1 -> "image.png"
-                                             n -> "image" ++ show n ++ ".png")
+                                             _ -> "image" ++ show n ++ ".png")
     let imagefn = case filter (endsWith ".png") args of
                        (x:_) -> x
                        _     -> def_imagefn
