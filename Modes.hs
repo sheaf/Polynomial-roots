@@ -10,6 +10,7 @@ import Overture hiding (many)
 import Prelude ()
 
 import Control.Applicative((<$>),(<*>),(*>))
+import Control.Parallel.Strategies (using, parTraversable, rdeepseq)
 import Data.Functor.Compose
 import Data.Traversable
 import Data.Tree (Tree)
@@ -40,7 +41,8 @@ instance (PCoefficient a) => Mode (IFSDensityMode a) where
     type ModeColour (IFSDensityMode a) = DensityCol
     type ModeConfig (IFSDensityMode a) = Config DensityCol a
     type Traversor  (IFSDensityMode a) = Compose [] Tree
-    getInputData _ = Compose . ifsPoints id
+    getInputData _ = (`using` parTraversable rdeepseq) 
+                   . Compose . ifsPoints id
     extractCol   _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig  _ = pModeConfig pDensityCol
 
@@ -48,16 +50,8 @@ instance (PCoefficient a) => Mode (IFSSourceMode a) where
     type ModeColour (IFSSourceMode a) = SourceCol a
     type ModeConfig (IFSSourceMode a) = Config SourceColB a
     type Traversor  (IFSSourceMode a) = Compose [] Tree
-    getInputData _ = Compose . ifsPoints (id &&&)
-    extractCol   _ = (\ (Config cfs _ _ _ _ _ g) -> addCfs cfs g)
-    parseConfig  _ = pModeConfig pSourceCol
-
-instance (PCoefficient a) => Mode (RootsSourceMode a) where
-    type ModeColour (RootsSourceMode a) = SourceCol a
-    type ModeConfig (RootsSourceMode a) = Config SourceColB a
-    type Traversor  (RootsSourceMode a) = Compose [] (Compose Tree [])
-    getInputData _ = Compose . fmap Compose 
-                   . getRoots ((uncurry map .) . ( (,) &&& ))
+    getInputData _ = (`using` parTraversable rdeepseq) 
+                   . Compose . ifsPoints (id &&&)
     extractCol   _ = (\ (Config cfs _ _ _ _ _ g) -> addCfs cfs g)
     parseConfig  _ = pModeConfig pSourceCol
 
@@ -65,9 +59,21 @@ instance (PCoefficient a) => Mode (RootsDensityMode a) where
     type ModeColour (RootsDensityMode a) = DensityCol
     type ModeConfig (RootsDensityMode a) = Config DensityCol a
     type Traversor  (RootsDensityMode a) = Compose [] (Compose Tree [])
-    getInputData _ = Compose . fmap Compose . getRoots id
+    getInputData _ = Compose . fmap Compose . getCompose
+                   . (`using` parTraversable rdeepseq)
+                   . Compose . getRoots id
     extractCol   _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig  _ = pModeConfig pDensityCol
+
+instance (PCoefficient a) => Mode (RootsSourceMode a) where
+    type ModeColour (RootsSourceMode a) = SourceCol a
+    type ModeConfig (RootsSourceMode a) = Config SourceColB a
+    type Traversor  (RootsSourceMode a) = Compose [] (Compose Tree [])
+    getInputData _ = Compose . fmap Compose . getCompose
+                    . (`using` parTraversable rdeepseq) 
+                    . Compose . getRoots ((uncurry map .) . ( (,) &&& ))
+    extractCol   _ = (\ (Config cfs _ _ _ _ _ g) -> addCfs cfs g)
+    parseConfig  _ = pModeConfig pSourceCol
 
 --------------------------------------------------------------------------------
 --Some existential types.

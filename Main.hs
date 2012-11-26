@@ -7,8 +7,6 @@ module Main where
 import Overture
 import Prelude ()
 
-import Control.Parallel.Strategies(using, parTraversable, rdeepseq)
-
 import qualified Configuration as C (outputSize)
 import Configuration.Parsing(runParse, pRunSpec)
 import Image (writeImage)
@@ -63,7 +61,7 @@ getPlot :: (Mode m)
             => f i -> IO (IOArrayRaster v i (ColourData (ModeColour m))) -> r)
         -> r
 getPlot mode cfg col spec k =
-    k (getInputData mode cfg `using` parTraversable rdeepseq) $
+    k (getInputData mode cfg) $
     mkRasterizer (\inp -> (pair mkCd2 (toCoord col inp), toData col inp)) (getrb spec) ib
         where c  = get (windowCenter . render) spec
               s  = get (windowSize   . render) spec
@@ -73,13 +71,13 @@ getPlot mode cfg col spec k =
 --------------------------------------------------------------------------------
 --Config handling.
 
-mkFromConfig' :: AnyConfig -> RunSpec -> IO()
-mkFromConfig' (AnyConfig mode cfg col) = mkFromConfig mode cfg col
+mkFromConfig :: AnyConfig -> RunSpec -> IO()
+mkFromConfig (AnyConfig mode cfg col) = mkFromConfig' mode cfg col
 
-mkFromConfig :: Mode m => m -> ModeConfig m -> ModeColour m -> RunSpec -> IO()
-mkFromConfig mode cfg col spec = case get runMode spec of 
-                                      WithGUI   -> runAsGui mode cfg col spec
-                                      ImageFile -> runAsCmd mode cfg col spec
+mkFromConfig' :: Mode m => m -> ModeConfig m -> ModeColour m -> RunSpec -> IO()
+mkFromConfig' mode cfg col spec = case get runMode spec of 
+                                       WithGUI   -> runAsGui mode cfg col spec
+                                       ImageFile -> runAsCmd mode cfg col spec
 
 --------------------------------------------------------------------------------
 --Main.
@@ -102,4 +100,4 @@ main = do
          (Right rspec, Right rmode) -> do cfg <- modeConfigFromMode fn rmode
                                           case cfg of
                                                Left s     -> writeError s
-                                               Right rCfg -> mkFromConfig' rCfg rspec
+                                               Right rcfg -> mkFromConfig rcfg rspec

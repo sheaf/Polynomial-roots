@@ -108,7 +108,7 @@ type DensityCol   = (GradientSpec, BG, Double)
 addCfs :: [a] -> SourceColB -> SourceCol a
 addCfs d (a,b,c,e) = (a,b,c,d,e)
 
-class (Monoid (ColourData c), NFData (InputData c)) => ColourScheme c where
+class (Monoid (ColourData c)) => ColourScheme c where
     type ColourData c :: *
     type InputData  c :: *
     toColour :: c -> ColourData c -> AlphaColour Double
