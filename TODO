@@ -2,9 +2,9 @@ TODO:
 
 Computation:
 Optimise (better bounds, etc).
-Add parallelisation for trees, roots, ifs, rendering.
 Speed up companion matrix calculation (esp. spurious calculations of companion').
 Improve routines in Polynomials module, especially memory consumption.
+Reduce memory footprint of multithreading.
 
 Colouring:
 Allow output of transparent png files.
