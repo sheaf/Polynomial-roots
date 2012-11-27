@@ -14,5 +14,6 @@
 *.eventlog
 *.svg
 *.txt
+*.tix
 Main
 dist
