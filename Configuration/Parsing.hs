@@ -218,8 +218,8 @@ pAnyPair p = try $ pPair p
 
 pAnyComplex :: (Monad m, Num a, RealFloat a) 
          => ParsecT String u m a -> ParsecT String u m (Complex a)
-pAnyComplex p = uncurry (:+) <$> try ( pAnyPair p)
-            <|> pComplex p
+pAnyComplex p = try $ pComplex p
+            <|> (uncurry (:+) <$> try (pAnyPair p))
 
 pRatio :: (Monad m, Integral a) => ParsecT String u m a -> ParsecT String u m (Ratio a)
 pRatio p = do n <- p
@@ -263,11 +263,11 @@ pComplex p = do s1 <- option id pm
                 z2 <- option (0 :+ 0) q'
                 return $ s1 z1 + z2
                 <?> "complex coordinates"
-                    where q = do try $ pString "i" *>
-                                          choice [ pm *> return (0:+1)
+                    where q = try $ pString "i" *>
+                                          choice [ lookAhead pm *> return (0:+1)
                                                  , (0 :+) <$> option 1 p]
-                                 <|> (try $ (0 :+) <$> option 1 p <* pString "i")
-                                 <|> (:+ 0) <$> p
+                              <|> (try $ (0 :+) <$> (option 1 p <* pString "i"))
+                              <|> ((:+ 0) <$> p)
                           q' = do s <- pm
                                   s <$> q
 
