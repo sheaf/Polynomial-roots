@@ -1,4 +1,3 @@
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -10,9 +9,8 @@ import Overture hiding (many)
 import Prelude ()
 
 import Control.Applicative((<$>),(<*>),(*>))
-import Control.Parallel.Strategies (using, parTraversable, rdeepseq)
+import Control.Parallel.Strategies (using, parBuffer, rdeepseq)
 import Data.Functor.Compose
-import Data.Traversable
 import Data.Tree (Tree)
 import Text.Parsec
 
@@ -24,11 +22,10 @@ import Types
 --------------------------------------------------------------------------------
 --Mode definitions.
 
-class (ColourScheme (ModeColour m), Traversable (Traversor m)) => Mode m where
+class (ColourScheme (ModeColour m)) => Mode m where
     type ModeColour m :: *
     type ModeConfig m :: *
-    type Traversor  m :: * -> *
-    getInputData :: m -> ModeConfig m -> Traversor m (InputData (ModeColour m))
+    getInputData :: m -> ModeConfig m -> [InputData (ModeColour m)]
     parseConfig  :: (Monad n) => m -> ParsecT String u n (ModeConfig m)
     extractCol   :: m -> ModeConfig m -> ModeColour m
 
@@ -40,8 +37,7 @@ data RootsDensityMode a = RootsDensityMode
 instance (PCoefficient a) => Mode (IFSDensityMode a) where
     type ModeColour (IFSDensityMode a) = DensityCol
     type ModeConfig (IFSDensityMode a) = Config DensityCol a
-    type Traversor  (IFSDensityMode a) = Compose [] Tree
-    getInputData _ = (`using` parTraversable rdeepseq) 
+    getInputData _ = (`using` parBuffer 1000 rdeepseq) . toList 
                    . Compose . ifsPoints id
     extractCol   _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig  _ = pModeConfig pDensityCol
@@ -49,8 +45,7 @@ instance (PCoefficient a) => Mode (IFSDensityMode a) where
 instance (PCoefficient a) => Mode (IFSSourceMode a) where
     type ModeColour (IFSSourceMode a) = SourceCol a
     type ModeConfig (IFSSourceMode a) = Config SourceColB a
-    type Traversor  (IFSSourceMode a) = Compose [] Tree
-    getInputData _ = (`using` parTraversable rdeepseq) 
+    getInputData _ = (`using` parBuffer 1000 rdeepseq) . toList
                    . Compose . ifsPoints (id &&&)
     extractCol   _ = (\ (Config cfs _ _ _ _ _ g) -> addCfs cfs g)
     parseConfig  _ = pModeConfig pSourceCol
@@ -58,9 +53,8 @@ instance (PCoefficient a) => Mode (IFSSourceMode a) where
 instance (PCoefficient a) => Mode (RootsDensityMode a) where
     type ModeColour (RootsDensityMode a) = DensityCol
     type ModeConfig (RootsDensityMode a) = Config DensityCol a
-    type Traversor  (RootsDensityMode a) = Compose [] (Compose Tree [])
-    getInputData _ = Compose . fmap Compose . getCompose
-                   . (`using` parTraversable rdeepseq)
+    getInputData _ = concat
+                   . (`using` parBuffer 1000 rdeepseq) . toList
                    . Compose . getRoots id
     extractCol   _ = (\ (Config _ _ _ _ _ _ g) -> g)
     parseConfig  _ = pModeConfig pDensityCol
@@ -68,17 +62,16 @@ instance (PCoefficient a) => Mode (RootsDensityMode a) where
 instance (PCoefficient a) => Mode (RootsSourceMode a) where
     type ModeColour (RootsSourceMode a) = SourceCol a
     type ModeConfig (RootsSourceMode a) = Config SourceColB a
-    type Traversor  (RootsSourceMode a) = Compose [] (Compose Tree [])
-    getInputData _ = Compose . fmap Compose . getCompose
-                    . (`using` parTraversable rdeepseq) 
-                    . Compose . getRoots ((uncurry map .) . ( (,) &&& ))
+    getInputData _ = concat
+                   . (`using` parBuffer 1000 rdeepseq) . toList
+                   . Compose . getRoots ((uncurry map .) . ( (,) &&& ))
     extractCol   _ = (\ (Config cfs _ _ _ _ _ g) -> addCfs cfs g)
     parseConfig  _ = pModeConfig pSourceCol
 
 --------------------------------------------------------------------------------
 --Some existential types.
 
-data AnyMode = forall m. (Mode m) => AnyMode m
+data AnyMode   = forall m. (Mode m) => AnyMode m
 data AnyConfig = forall m. (Mode m) => AnyConfig m (ModeConfig m) (ModeColour m)
 
 --------------------------------------------------------------------------------
