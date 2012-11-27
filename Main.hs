@@ -7,7 +7,6 @@ module Main where
 import Overture
 import Prelude ()
 
-import System.Directory(doesFileExist)
 import System.Environment(getArgs)
 
 import qualified Configuration as C (outputSize)
