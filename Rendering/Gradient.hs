@@ -1,6 +1,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
+
 module Rendering.Gradient where
 
 import Overture
@@ -123,14 +124,29 @@ splitGrads ((g1, n1):gns) = adjacent n1 <$> g1' <*> splitGrads gns
 getBlendFunc Blend = blend 0.5
 getBlendFunc Overlay = (++)
 
+newtype WeightedAlphaColour a = W (AlphaColour a, Int)
+fromWeighted :: (Eq a, Num a, Fractional a) 
+             => WeightedAlphaColour a -> AlphaColour a
+fromWeighted (W(c,w)) = go c w
+    where go c 0 = mempty
+          go c 1 = c
+          go c n = case alphaChannel c of
+                        0 -> mempty
+                        a -> dissolve ((1 - (1-a)^n)/a) c
+
+instance Fractional a => Monoid (WeightedAlphaColour a) where
+    mempty = W (transparent, 0)
+    (W(c1,w1)) `mappend` (W(c2, w2)) = W (blend (v1 / (v1+v2)) c1 c2, w1+w2)
+        where [v1,v2] = map fromIntegral [w1,w2]
+
 --Colour scheme definitions.
 instance (Coefficient a) => ColourScheme (SourceCol a) where
-    type ColourData (SourceCol a) = AlphaColour Double
+    type ColourData (SourceCol a) = WeightedAlphaColour Double
     type InputData  (SourceCol a)= (Polynomial a, Complex Double)
-    toColour _              = id
-    toData   (s,_,"1",l,t)  = \(p,r) -> source1 g l (drop t p) r
+    toColour _              = fromWeighted
+    toData   (s,_,"1",l,t)  = \(p,r) -> W (source1 g l (drop t p) r, 1)
         where g = fromJust $ fromExpr s
-    toData   (s,_,"2",l,t)  = \(p,r) -> source2 g l (drop t p) r
+    toData   (s,_,"2",l,t)  = \(p,r) -> W (source2 g l (drop t p) r, 1)
         where g = fromJust $ fromExpr s
     toData   _              = error "wrong method for source colouring"
     toCoord  _ (_,z)        = z
