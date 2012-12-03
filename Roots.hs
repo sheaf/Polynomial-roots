@@ -1,7 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-
 module Roots where
 
 import Overture
@@ -23,8 +22,9 @@ import qualified Data.Packed.Vector as V (toList)
 --------------------------------------------------------------------------------
 --Bound used for pruning trees of polynomials.
 
-bound :: (Coefficient a) => 
-         IterCoeffs a -> ComplexInterval -> RealBound
+-- |Bounds the contribution of the remaining terms past an initial segment.
+-- This is used to prune trees of polynomials.
+bound :: (Coefficient a) => IterCoeffs a -> ComplexInterval -> RealBound
 bound cfs cI d
     |fst rI > 1 = maxcoeff * mini (1 /! rI)
     |otherwise = maxcoeff * mini rI
@@ -32,15 +32,17 @@ bound cfs cI d
               rI = absI cI
               maxcoeff = maximum (map toAbs cfs)
 
---This gives the possible initial terms for polynomials that might have roots.
+-- |Gives the possible initial segments of polynomials that can have roots.
 canYieldRoots :: (Coefficient a) =>
               IterCoeffs a -> Degree -> ComplexInterval -> [Polynomial a]
 canYieldRoots cfs d cI = concatMap getAllLeafPolynomials 
                        $ constructForest d cfs (bound cfs cI) cI
 
+-- |Returns all polynomials up to the given degree which can have roots
+-- in the specified region.
 canHaveRoots :: (Coefficient a) =>
              IterCoeffs a -> Degree -> ComplexInterval -> Forest (Polynomial a)
-canHaveRoots cfs d cI = constructPolyForest d cfs (bound cfs cI) cI
+canHaveRoots cfs d cI = toPolyForest [] $constructForest d cfs (bound cfs cI) cI
 
 --------------------------------------------------------------------------------
 --Root finding.
@@ -53,7 +55,7 @@ findRoots' p
     | otherwise     = polySolve p
 -}
 
---Alternative using LAPACK.
+--| Root finding methods, using LAPACK.
 findRoots, findRoots' :: Coefficient a => Polynomial a -> [Root]
 findRoots = findRoots' . trim
 findRoots' p
@@ -68,11 +70,13 @@ findRoots' p
 --------------------------------------------------------------------------------
 --Plotting sets of roots.
 
+-- |Returns the forest of polynomials that can have roots in a region.
 getPolys :: (Coefficient a) => Config c a -> Forest (Polynomial a)
 getPolys (Config ic (rx, ry) d c w _ _) = canHaveRoots ic d cI
   where h  = w * fromIntegral ry / fromIntegral rx
         cI = c +! ((-w/2) :+ (-h/2), (w/2) :+ (h/2))
 
+-- |Returns all possible roots that can occur in a region, up to a given degree.
 getRoots :: (Coefficient a) => ((Polynomial a -> [Root]) -> (Polynomial a -> b))
          -> Config c a -> Forest b
 getRoots q cfg = getCompose . fmap (q findRoots) . Compose $ getPolys cfg

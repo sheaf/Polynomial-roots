@@ -1,10 +1,7 @@
 {-# LANGUAGE TypeFamilies, TypeSynonymInstances,
              FlexibleContexts, FlexibleInstances,
              RankNTypes#-}
-module Types ( module Types
-             , module Configuration
-             , module Data.Complex
-             ) where
+module Types where
 
 import Overture
 import Prelude ()
@@ -24,6 +21,7 @@ import Util
 --Have to be able to coerce coefficients into the complex numbers,
 --for polynomial evaluation.
 
+-- |Class of allowable coefficients for polynomials.
 class (Eq a, Num a, Show a, Read a, NFData a) => Coefficient a where
     toComplex :: a -> Complex Double
     toAbs     :: a -> Double
@@ -69,24 +67,18 @@ instance (Coefficient a) => Num (Polynomial a) where
 --Root finding types.
 type Degree     = Int
 type RealBound  = Degree -> Double
-type Point      = Complex Double
-type Guess      = Complex Double
 type Root       = Complex Double
-type Iterations = Int
-type ErrorBound = Double
-type StartVals  = [Point]
-
---Iterated function systems.
-type IFS = (Point -> [Point], StartVals)
     
 --Plotting datatypes, and options.
 type Resolution = (Int,Int)
 type Center     = Complex Double
 type Width      = Double
 type Pixel      = (Int,Int)
+
 --Scaling function
 type Scaler a   = Complex Double -> Polynomial a -> Complex Double
---Gradient as a monoid homomorphism into colour space.
+
+--Gradients, backgrounds.
 newtype Gradient m clr a = Grad { runGrad :: m -> clr a }
 type BG = AlphaColour Double
 
@@ -109,10 +101,17 @@ type DensityCol   = (GradientSpec, BG, Double)
 addCfs :: [a] -> SourceColB -> SourceCol a
 addCfs d (a,b,c,e) = (a,b,c,d,e)
 
+-- |Colour schemes.
+-- A colour scheme takes in input, turning it into elements of a monoid.
+-- After using the monoid structure to combine input, it outputs a colour.
 class (Monoid (ColourData c)) => ColourScheme c where
     type ColourData c :: *
     type InputData  c :: *
-    toColour :: c -> ColourData c -> AlphaColour Double
+    -- |Turns input into values of a monoid.
     toData   :: c -> InputData  c -> ColourData c
+    -- |Takes in a value of the monoid and returns a colour.
+    toColour :: c -> ColourData c -> AlphaColour Double
+    -- |Gives the corresponding coordinate for an input value.
     toCoord  :: c -> InputData  c -> Complex Double
+    -- |Background colour; useful separately to toColour mempty.
     bg       :: c -> AlphaColour Double

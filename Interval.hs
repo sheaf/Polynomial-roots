@@ -5,6 +5,8 @@ module Interval where
 import Overture
 import Prelude ()
 
+import Data.Complex
+
 import Polynomials
 import Types
 
@@ -21,6 +23,7 @@ infix 7 !*
 infix 7 /!
 infix 7 !/
 
+-- |Class supporting operations of interval arithmetic.
 class (Fractional a, Fractional (Scalar a)) => Interval a where
     type Scalar a :: *
     intersects :: a -> a -> Bool
@@ -48,6 +51,7 @@ class (Fractional a, Fractional (Scalar a)) => Interval a where
 --------------------------------------------------------------------------------
 --Real intervals, [a,b] = { x : a <= x <= b}.
 
+-- |Real interval, specified by left and right endpoints.
 type RealInterval = (Double,Double)
 
 instance Num RealInterval where
@@ -85,8 +89,10 @@ instance Interval RealInterval where
 --------------------------------------------------------------------------------
 --Rectangular complex intervals, given by lower left and upper right corners.
 
+-- |Rectangular complex interval, given by bottom left and top right corners.
 type ComplexInterval = (Complex Double,Complex Double)
 
+-- |Shortest distance from the origin to the interval.
 minabsI :: ComplexInterval -> Double
 minabsI (z,w)
     | x <=0 && y <= 0 && x' >=0 && y' >=0 = 0
@@ -100,6 +106,7 @@ minabsI (z,w)
               x'= realPart w
               y'= imagPart w
 
+-- |Longest distance from the origin to the interval.
 maxabsI :: ComplexInterval -> Double
 maxabsI (z,w) = sqrt $ maximum [x*x+y*y,x*x+y'*y',x'*x'+y*y,x'*x'+y'*y']
     where x = realPart z
@@ -107,6 +114,7 @@ maxabsI (z,w) = sqrt $ maximum [x*x+y*y,x*x+y'*y',x'*x'+y*y,x'*x'+y'*y']
           x'= realPart w
           y'= imagPart w
 
+-- |Real interval of distance from the origin.
 absI :: ComplexInterval -> RealInterval
 absI (z,w) = (minabsI(z,w),maxabsI(z,w))
 
@@ -129,6 +137,7 @@ instance Num ComplexInterval where
 
 instance Fractional ComplexInterval where
     (/) = error "Division of ComplexInterval by ComplexInterval not defined"
+          --TODO.
     fromRational q = (fromRational q::Complex Double,
                       fromRational q::Complex Double)
 
@@ -147,8 +156,9 @@ instance Interval ComplexInterval where
     c -! (z,w) = (c-w,c-z)
     
 --------------------------------------------------------------------------------
---Disk complex intervals, given by center and radius.
+--Disk complex intervals, given by centre and radius.
 
+-- |Disk complex interval, specified by centre and radius.
 type Disk = (Complex Double, Double)
 
 instance Num Disk where
@@ -182,13 +192,13 @@ absD (c,r) = (mini,maxi)
 --------------------------------------------------------------------------------
 --Evaluation of polynomials on intervals.
 
---Evaluation using Horner scheme method.
+--| Evaluates a polynomial on an interval using Horner scheme method.
 evaluateI :: (Coefficient (Scalar b), Interval b)
              => Polynomial (Scalar b) -> b -> b
 evaluateI p cI = foldr' (\b w -> b +! cI * w) 0 p 
 
---Evaluation of polynomials on disks, always producing less spurious results.
---That is, evaluateD p d is always a subset of evaluateI p d
+-- |Evaluation of polynomials on disks, always producing less spurious results.
+-- That is, evaluateD p d is always a subset of evaluateI p d
 evaluateD :: Polynomial (Complex Double) -> Disk -> Disk
 evaluateD p (c,r) = (c',r')
     where c' = evaluate p c
@@ -198,17 +208,19 @@ evaluateD p (c,r) = (c',r')
 --Conversions between complex intervals (introduces spurious results),
 --and other useful functions.
 
+-- |Finds the smallest disk containing a given rectangular region.
 rectToDisk :: ComplexInterval -> Disk
 rectToDisk (z,w) = (c,r)
     where c = (z+w)/2
           r = magnitude $ (w-z)/2
 
+-- |Finds the smallest rectangler containing a given disk.
 diskToRect :: Disk -> ComplexInterval
 diskToRect (c,r) = (z,w)
     where z = c - r'*(1:+1)
           w = c + r'*(1:+1)
           r' = realToFrac r
-          
+
 scaleDisk :: Disk -> Double -> Disk
 scaleDisk (c,r) l = (c, r*l)
 

@@ -7,8 +7,10 @@ module Main where
 import Overture
 import Prelude ()
 
+import Data.Label (get)
 import System.Environment(getArgs)
 
+import Configuration hiding (outputSize)
 import qualified Configuration as C (outputSize)
 import Configuration.Parsing(runParse, pRunSpec)
 import Image (writeImage)
@@ -18,7 +20,7 @@ import Pair (Pair(pair), StrictPair)
 import Rendering.ArrayRaster (IOArrayRaster)
 import Rendering.Coord (Cd2(..), mkCd2)
 import Rendering.Raster (Rasterizer(mkRasterizer))
-import Settings (get, runEnvT, specToSettings)
+import Settings (runEnvT, specToSettings)
 import Types
 import Util
 

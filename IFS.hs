@@ -15,16 +15,22 @@ import Types
 --------------------------------------------------------------------------------
 --IFS plotting.
 
-scalePoint :: (Coefficient a) => Complex Double -> Scaler a -- Scaler a ~ (Complex Double -> Polynomial a -> Complex Double)
+-- |Scales a point depending on the polynomial which produced it.
+-- This makes the set of roots of a family of polynomials around a point 
+-- resemble the corresponding family of scaled values around that point.
+scalePoint :: (Coefficient a) => Complex Double -> Scaler a
 scalePoint c z p = z * scale
     where scale = (negate . recip . (`evaluate` c)) . derivative . map toComplex $ p
 
+-- |Takes in a forest of polynomials and evaluates them at a point.
+-- This produces a forest of points of the associated IFS.
 ifsCounts :: (Coefficient a) => ((Polynomial a -> Root) -> (Polynomial a -> b))
           -> Config c a -> Scaler a -> Forest (Polynomial a) -> Forest b
 ifsCounts q (Config _ _ _ c _ _ _) f forest = rootForest
     where eval       = flip evaluate c . map toComplex
           rootForest = (map . fmap) (q $ uncurry f . (eval &&& id)) forest
 
+-- |Returns the forest of points of an IFS corresponding to the configuration.
 ifsPoints :: (Coefficient a) => ((Polynomial a -> Root) -> (Polynomial a -> b))
           -> Config c a -> Forest b
 ifsPoints q cfg@(Config ic (rx,ry) d c w s g) = ifsForest

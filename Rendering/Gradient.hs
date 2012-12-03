@@ -7,12 +7,14 @@ module Rendering.Gradient where
 import Overture
 import Prelude ()
 
+import Data.Complex (phase)
 import Data.Colour.Names
 import Data.List ( lookup )
 import Data.Maybe ( fromJust )
 import qualified Data.Map as Map (lookup)
 import Data.Monoid
 
+import Configuration
 import Polynomials
 import Rendering.Colour
 import qualified Rendering.Colour.Names as Names (gradientDict, gradientNames)

@@ -1,11 +1,12 @@
 {-# LANGUAGE TypeFamilies #-}
 module MainGUI where
 
-import Overture hiding (mapM_)
+import Overture
 import Prelude ()
 
 import Control.Exception (bracket_)
 import Control.Monad.IO.Class (MonadIO(liftIO))
+import Control.Monad.Reader(ask, asks)
 import Data.Colour
 import Data.Foldable (Foldable(), toList)
 import GHC.Word (Word16, Word32)
@@ -22,7 +23,7 @@ import Rendering.Colour
 import Rendering.Coord (Cd2, RstSize)
 import qualified Settings as S (size)
 import Settings hiding (size)
-import Types hiding (Config(..), outputSize)
+import Types hiding (Config(..))
 import Util
 
 type Time = Word32

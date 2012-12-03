@@ -11,7 +11,7 @@ import Pair (Pair(toTuple))
 import Rendering.Colour (ColourOps(over), toRGB8)
 import Rendering.Raster
 import Rendering.Coord (RstCoord)
-import Types hiding (outputSize)
+import Types
 
 --------------------------------------------------------------------------------
 --Image writing.

@@ -4,13 +4,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module Settings ( module Settings
-                , module Data.Complex
-                , module Data.Label.Pure
-                , module Control.Applicative
-                , module Control.Category
-                , module Control.Monad.Reader
-                ) where
+module Settings where
 
 import Control.Monad.Reader
 import Control.Monad.Identity (Identity)
@@ -20,8 +14,8 @@ import Data.Complex
 import Data.Label (mkLabels)
 import Data.Label.Pure
 
-import Types (outputSize, render, windowCenter, windowSize
-             , Width, Center, Resolution)
+import Configuration
+import Types (Width, Center, Resolution)
 import qualified Types as T ( Config(Config) )
 import qualified Pair as P ( StrictPair(spFst), Pair(toTuple) )
 import Rendering.Coord ( Cd2(getCd2) )
