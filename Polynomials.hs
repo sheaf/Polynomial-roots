@@ -28,6 +28,15 @@ taylor p c = zipWith (/) derivs facts
             where derivs = map (`evaluate` c) $ takeWhile (not.null) $ iterate derivative p
                   facts = map fromIntegral $ scanl (*) 1 [1..]
 
+--Finds the closest coefficient to a given one in a list.
+closest :: Coefficient a => a -> [a] -> a
+closest _  []     = error "finding closest element in an empty list..."
+closest cf (c:[]) = c
+closest cf (c:cs) = let c' = closest cf cs in
+                        case toAbs (cf - c) < toAbs (cf - c') of
+                              True -> c
+                              _    -> c'
+
 --------------------------------------------------------------------------------
 --Routines to compute companion matrices.
 

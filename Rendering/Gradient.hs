@@ -176,13 +176,14 @@ source2 g cfs p r = runGrad g (toGValue2 cfs p r)
 
 --Converts a polynomials with coefficients in [c1,c2,...] to a polynomial
 --with coefficients in [d1,d2,...].
---Somewhat dodgy, as it depends on exact matching of coefficients...
-convertCoeffs :: (Coefficient a, Coefficient b) => [a] -> [b] -> Polynomial a -> Polynomial b 
+convertCoeffs :: (Coefficient a, Coefficient b) 
+              => [a] -> [b] -> Polynomial a -> Polynomial b 
 convertCoeffs _ _ [] = []
-convertCoeffs cfs dfs (c:cs) = case lookup c cfs' of
-                                    Nothing  -> error "couldn't look up coeff; possible rounding error"
-                                    Just cf' -> cf' : convertCoeffs cfs dfs cs
-    where cfs' = zipWith (\x y -> (y,x)) dfs cfs
+convertCoeffs cfs dfs (c:cs) = cf : convertCoeffs cfs dfs cs
+    where cfs' = zip cfs dfs
+          cf'  = closest c cfs
+          cf   = maybe (error "error looking up coefficient... rounding error?") 
+                       id $ lookup cf' cfs'
 
 --Note: colouring depends on the order of the coefficients.
 --This is a "base d" expansion.
