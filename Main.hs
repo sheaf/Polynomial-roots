@@ -7,7 +7,7 @@ module Main where
 import Overture
 import Prelude ()
 
-import Data.Label (get)
+import Data.Label.Pure (get)
 import System.Environment(getArgs)
 
 import Configuration hiding (outputSize)

@@ -55,7 +55,7 @@ findRoots' p
     | otherwise     = polySolve p
 -}
 
---| Root finding methods, using LAPACK.
+-- |Root finding methods, using LAPACK.
 findRoots, findRoots' :: Coefficient a => Polynomial a -> [Root]
 findRoots = findRoots' . trim
 findRoots' p

@@ -192,7 +192,7 @@ absD (c,r) = (mini,maxi)
 --------------------------------------------------------------------------------
 --Evaluation of polynomials on intervals.
 
---| Evaluates a polynomial on an interval using Horner scheme method.
+-- |Evaluates a polynomial on an interval using Horner scheme method.
 evaluateI :: (Coefficient (Scalar b), Interval b)
              => Polynomial (Scalar b) -> b -> b
 evaluateI p cI = foldr' (\b w -> b +! cI * w) 0 p 
