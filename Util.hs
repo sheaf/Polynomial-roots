@@ -21,3 +21,9 @@ nextImageName :: (Int -> String) -> IO(String)
 nextImageName f = go f 1
     where go g n = do exists <- doesFileExist (g n)
                       if exists then go g (n+1) else return (g n)
+
+zipWithDefault :: (a -> b -> c) -> a -> b -> [a] -> [b] -> [c]
+zipWithDefault f da db (a:as) (b:bs) = f a  b  : zipWithDefault f da db as bs
+zipWithDefault f da db []     (b:bs) = f da b  : zipWithDefault f da db [] bs
+zipWithDefault f da db (a:as) []     = f a  db : zipWithDefault f da db as []
+zipWithDefault f da db []     []     = []

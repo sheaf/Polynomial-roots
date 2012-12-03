@@ -15,6 +15,7 @@ import Configuration hiding (center)
 import Data.Complex
 import Data.Ratio (Ratio, numerator, denominator)
 import Rendering.Colour (AlphaColour)
+import Util
 
 --------------------------------------------------------------------------------
 --Basic datatypes.
@@ -57,10 +58,10 @@ type Polynomial a = [a]
 type IterCoeffs a = [a]
 
 instance (Coefficient a) => Num (Polynomial a) where
-    a + b           = zipWith (+) a b
+    (+)             = zipWithDefault (+) 0 0
     negate          = map negate
     (a:as) * (b:bs) = [a*b] + (0 : map (a*) bs) + (0: map (*b) as) + (0 : 0 : (as*bs))
-    _ * _           = []
+    _      * _      = []
     fromInteger n   = [fromInteger n]
     abs             = map abs
     signum _        = error "No signum definition for Polynomial"
