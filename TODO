@@ -4,11 +4,12 @@ Computation:
 Optimise (better bounds, etc).
 Speed up companion matrix calculation (esp. spurious calculations of companion').
 Improve routines in Polynomials module, especially memory consumption.
-Reduce memory footprint of multithreading.
 
 Colouring:
 Allow output of transparent png files.
 Change strings to Word8, Word24 etc in hex parsing.
+Clean up source colouring: polynomial coefficients should have abstract labels,
+    preventing any kind of coefficient matching issues...
 
 Gradients:
 Clean up gradient specifications, and allow parsing of transforms.
@@ -23,3 +24,5 @@ General:
 Command line parameter to determine output file.
 Flip y-axis in image routines.
 Cleanup using roots/ifs, source/density, different coeffs... uniformly!
+As per http://www.haskell.org/ghc/docs/7.4.2/html/users_guide/sooner-faster-quicker.html
+    remove unnecessary instance derivations.
