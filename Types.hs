@@ -41,7 +41,7 @@ instance Coefficient Double where
     toReal      = Just <$> id
 instance (Coefficient a, RealFloat a) => Coefficient (Complex a) where 
     toComplex (x :+ y) = toComplex x + (0 :+ 1) * toComplex y 
-    toAbs     (x :+ y) = toAbs(x^2+y^2)
+    toAbs     (x :+ y) = sqrt . toAbs $ x^2+y^2
     toReal    = const Nothing
 instance (Coefficient a, Integral a) => Coefficient (Ratio a) where
     toComplex q = toComplex a / toComplex b
