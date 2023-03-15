@@ -1,9 +1,19 @@
 module Rendering.Colour.Names where
 
-import Control.Monad.Identity(runIdentity)
-import Data.Colour (Colour)
+-- base
+import Data.Maybe
+  ( fromJust )
+
+-- colour
+import Data.Colour
+  ( Colour )
+import qualified Data.Colour.Names as C
+  ( readColourName )
+
+-- containers
 import Data.Map (Map, fromList)
-import qualified Data.Colour.Names as C (readColourName)
+
+-- polynomial-roots
 
 import Rendering.Colour (colourFromHex)
 
@@ -13,37 +23,38 @@ import Rendering.Colour (colourFromHex)
 --SVG 1.1 colour names, as supported by the Data.Colour module.
 --In alphabetical order.
 colourNames :: [String]
-colourNames = ["aliceblue","antiquewhite","aqua","aquamarine","azure","beige"
-        ,"bisque","black","blanchedalmond","blue","blueviolet","brown"
-        ,"burlywood","cadetblue","chartreuse","chocolate","coral"
-        ,"cornflowerblue","cornsilk","crimson","cyan","darkblue","darkcyan"
-        ,"darkgoldenrod","darkgray","darkgreen","darkgrey","darkkhaki"
-        ,"darkmagenta","darkolivegreen","darkorange","darkorchid","darkred"
-        ,"darksalmon","darkseagreen","darkslateblue","darkslategray"
-        ,"darkslategrey","darkturquoise","darkviolet","deeppink","deepskyblue"
-        ,"dimgray","dimgrey","dodgerblue","firebrick","floralwhite"
-        ,"forestgreen","fuchsia","gainsboro","ghostwhite","gold","goldenrod"
-        ,"gray","grey","green","greenyellow","honeydew","hotpink","indianred"
-        ,"indigo","ivory","khaki","lavender","lavenderblush","lawngreen"
-        ,"lemonchiffon","lightblue","lightcoral","lightcyan"
-        ,"lightgoldenrodyellow","lightgray","lightgreen","lightgrey"
-        ,"lightpink","lightsalmon","lightseagreen","lightskyblue"
-        ,"lightslategray","lightslategrey","lightsteelblue","lightyellow"
-        ,"lime","limegreen","linen","magenta","maroon","mediumaquamarine"
-        ,"mediumblue","mediumorchid","mediumpurple","mediumseagreen"
-        ,"mediumslateblue","mediumspringgreen","mediumturquoise"
-        ,"mediumvioletred","midnightblue","mintcream","mistyrose","moccasin"
-        ,"navajowhite","navy","oldlace","olive","olivedrab","orange"
-        ,"orangered","orchid","palegoldenrod","palegreen","paleturquoise"
-        ,"palevioletred","papayawhip","peachpuff","peru","pink","plum"
-        ,"powderblue","purple","red","rosybrown","royalblue","saddlebrown"
-        ,"salmon","sandybrown","seagreen","seashell","sienna","silver"
-        ,"skyblue","slateblue","slategray","slategrey","snow","springgreen"
-        ,"steelblue","tan","teal","thistle","tomato","turquoise","violet"
-        ,"wheat","white","whitesmoke","yellow","yellowgreen"]
+colourNames =
+  ["aliceblue","antiquewhite","aqua","aquamarine","azure","beige"
+  ,"bisque","black","blanchedalmond","blue","blueviolet","brown"
+  ,"burlywood","cadetblue","chartreuse","chocolate","coral"
+  ,"cornflowerblue","cornsilk","crimson","cyan","darkblue","darkcyan"
+  ,"darkgoldenrod","darkgray","darkgreen","darkgrey","darkkhaki"
+  ,"darkmagenta","darkolivegreen","darkorange","darkorchid","darkred"
+  ,"darksalmon","darkseagreen","darkslateblue","darkslategray"
+  ,"darkslategrey","darkturquoise","darkviolet","deeppink","deepskyblue"
+  ,"dimgray","dimgrey","dodgerblue","firebrick","floralwhite"
+  ,"forestgreen","fuchsia","gainsboro","ghostwhite","gold","goldenrod"
+  ,"gray","grey","green","greenyellow","honeydew","hotpink","indianred"
+  ,"indigo","ivory","khaki","lavender","lavenderblush","lawngreen"
+  ,"lemonchiffon","lightblue","lightcoral","lightcyan"
+  ,"lightgoldenrodyellow","lightgray","lightgreen","lightgrey"
+  ,"lightpink","lightsalmon","lightseagreen","lightskyblue"
+  ,"lightslategray","lightslategrey","lightsteelblue","lightyellow"
+  ,"lime","limegreen","linen","magenta","maroon","mediumaquamarine"
+  ,"mediumblue","mediumorchid","mediumpurple","mediumseagreen"
+  ,"mediumslateblue","mediumspringgreen","mediumturquoise"
+  ,"mediumvioletred","midnightblue","mintcream","mistyrose","moccasin"
+  ,"navajowhite","navy","oldlace","olive","olivedrab","orange"
+  ,"orangered","orchid","palegoldenrod","palegreen","paleturquoise"
+  ,"palevioletred","papayawhip","peachpuff","peru","pink","plum"
+  ,"powderblue","purple","red","rosybrown","royalblue","saddlebrown"
+  ,"salmon","sandybrown","seagreen","seashell","sienna","silver"
+  ,"skyblue","slateblue","slategray","slategrey","snow","springgreen"
+  ,"steelblue","tan","teal","thistle","tomato","turquoise","violet"
+  ,"wheat","white","whitesmoke","yellow","yellowgreen"]
 
 readColourName :: String -> Colour Double
-readColourName = runIdentity . C.readColourName
+readColourName = fromJust . C.readColourName
 
 --------------------------------------------------------------------------------
 --Gradient names.
@@ -53,7 +64,7 @@ gradientDict = fmap (flip zip [0,1/8..1] . map colourFromHex) $ fromList gradien
              --all gradients below are defined at 9 equally spaced points
 
 gradientNames :: [String]
-gradientNames = map fst gradientDict' 
+gradientNames = map fst gradientDict'
 
 gradientDict' :: [(String,[String])]
 gradientDict' =

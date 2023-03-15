@@ -1,31 +1,150 @@
-Name:                polynomial-roots
-Version:             0.2
-Synopsis:            Generates images related to roots of polynomials
-Description:         Explore plots of polynomial roots on the complex plane and
-                     their relationship to iterated function systems.
-                     
-                     Currently very incomplete.
-Homepage:            https://github.com/sheaf/Polynomial-roots
-License:             OtherLicense
-License-file:        LICENSE
-Author:              Sam Derbyshire & C. A. McCann
-Maintainer:          sam.derbyshire@gmail.com, cam@uptoisomorphism.net
-Category:            Math
-Build-type:          Simple
-Cabal-version:       >=1.2
+cabal-version: 3.0
 
-Executable polynomial-roots
-  Main-is:           Main.hs
-  Build-depends:     base >= 4 && < 5,
-                     SDL >= 0.6,
-                     gd >= 3000,
-                     hmatrix >= 0.12,
-                     array >= 0.3,
-                     colour >= 2.3,
-                     fclabels >= 1.0,
-                     mtl >= 2.0,
-                     transformers >= 0.2,
-                     directory >= 1.1,
-                     containers >= 0.4,
-                     Overture >= 0.3,
-                     parsec >= 3
+name:
+    polynomial-roots
+version:
+    1.0
+synopsis:
+    Generates images related to roots of polynomials
+description:
+    Explore plots of polynomial roots on the complex plane and
+    their relationship to iterated function systems.
+
+    Currently very incomplete.
+homepage:
+    https://github.com/sheaf/Polynomial-roots
+license:
+    BSD-3-Clause
+author:
+    Sam Derbyshire & C. A. McCann
+maintainer:
+    Sam Derbyshire
+category:
+    Math, Graphics, Fractals
+build-type:
+    Simple
+
+
+common common
+
+    build-depends:
+        base
+           >= 4 && < 5
+      , containers
+           >= 0.4
+      , deepseq
+           >= 1.4.4.0 && < 1.5
+      , directory
+           >= 1.1
+      , mtl
+           >= 2.0
+      , parallel
+          ^>= 3.2.2.0
+      , primitive
+          ^>= 0.7.1.0
+      , prim-instances
+          ^>= 0.2
+      , transformers
+           >= 0.5.6.2 && < 0.7
+
+    default-extensions:
+        BangPatterns
+        BlockArguments
+        ConstraintKinds
+        DataKinds
+        DeriveAnyClass
+        DeriveTraversable
+        DeriveGeneric
+        DerivingVia
+        FlexibleContexts
+        FlexibleInstances
+        FunctionalDependencies
+        GADTs
+        GeneralisedNewtypeDeriving
+        InstanceSigs
+        LambdaCase
+        LexicalNegation
+        MagicHash
+        MultiWayIf
+        NamedFieldPuns
+        NoStarIsType
+        PatternSynonyms
+        RankNTypes
+        RecordWildCards
+        RoleAnnotations
+        StandaloneDeriving
+        StandaloneKindSignatures
+        TupleSections
+        TypeApplications
+        TypeFamilies
+        TypeOperators
+        UnboxedTuples
+        ViewPatterns
+
+    ghc-options:
+        -O2
+        -fexpose-all-unfoldings
+        -fspecialise-aggressively
+        -flate-dmd-anal
+        -fmax-worker-args=200
+        -optc-O3
+        -Wall
+        -Wcompat
+        -fwarn-missing-local-signatures
+        -fwarn-incomplete-patterns
+        -fwarn-incomplete-uni-patterns
+        -fwarn-missing-deriving-strategies
+        -fno-warn-unticked-promoted-constructors
+
+executable polynomial-roots
+
+    import:
+        common
+
+    hs-source-dirs:
+        src
+
+    main-is:
+        Main.hs
+
+    default-language:
+        Haskell2010
+
+    build-depends:
+        array
+           >= 0.3
+      , colour
+           >= 2.3
+      , JuicyPixels
+           >= 3.3
+      , parsec
+           >= 3
+      , sdl2
+           >= 2.5
+      , spool
+          ^>= 0.1
+
+    other-modules:
+        Configuration
+        Configuration.Parsing
+        IFS
+        Image
+        Interval
+        MainGUI
+        Modes
+        Pair
+        Polynomials
+        Roots
+        Rendering.ArrayRaster
+        Rendering.Colour
+        Rendering.Colour.Names
+        Rendering.Coord
+        Rendering.Gradient
+        Rendering.Raster
+        Settings
+        Trees
+        Types
+        Util
+
+    ghc-options:
+      -threaded
